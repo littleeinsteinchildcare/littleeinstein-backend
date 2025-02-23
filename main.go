@@ -6,7 +6,7 @@ import (
 
 // gross
 
-func say_HelloWorld() {
+func sayHelloWorld() {
 
 	fmt.Println("Hello, world!")
 }
