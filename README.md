@@ -116,16 +116,27 @@ If you haven't installed Homebrew yet, you can find more details [here](https://
    ```sh
    cd $HOME/littleeinstein-backend
    ```
-2. Installing commitlint/cli commitlint/config-conventional
+2. Installing node
+   ```sh
+   brew install node
+   ```
+3. Verify node and npm
+   ```sh
+   npm -v
+   ```
+   ```sh
+   node -v
+   ```
+4. Installing commitlint/cli commitlint/config-conventional
    ```sh
    npm install -g @commitlint/cli @commitlint/config-conventional
    ```
    
-3. Install pre-commit hooks:
+5. Install pre-commit hooks:
    ```sh
    pre-commit install
    ```
-4. Run pre-commit manually (optional, to test it):
+6. Run pre-commit manually (optional, to test it):
    ```sh
    pre-commit run --all-files
    ```
