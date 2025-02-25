@@ -186,7 +186,15 @@ git clone https://github.com/littleeinsteinchildcare/littleeinstein-backend.git
    ```sh
    node -v
    ```
+4. Install some go packages
 
+   ```sh
+   go install golang.org/x/tools/cmd/goimports@latest
+   ```
+
+   ```sh
+   go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+   ```
 4. Installing commitlint/cli commitlint/config-conventional
 
    ```sh
