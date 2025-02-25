@@ -154,6 +154,16 @@ If you haven't installed Homebrew yet, you can find more details [here](https://
    ```
 
 ## Setting Up Pre-Commit in a Repository
+#### Make sure  you have Cloned the repo before the next steps 
+SSH: 
+```sh
+git clone git@github.com:littleeinsteinchildcare/littleeinstein-backend.git
+```
+
+HTTPS
+```sh
+git clone https://github.com/littleeinsteinchildcare/littleeinstein-backend.git
+```
 
 1. Navigate to your repository:
 
