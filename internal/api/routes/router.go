@@ -15,7 +15,6 @@ func SetupRouter() *http.ServeMux {
 	router := http.NewServeMux()
 
 	// Initialize repositories, services, and handlers
-
 	userRepoCfg := repositories.NewUserRepoConfig(os.Getenv("AZURE_STORAGE_ACCOUNT_NAME"), os.Getenv("AZURE_STORAGE_ACCOUNT_KEY"), os.Getenv("AZURE_STORAGE_SERVICE_URL"))
 	userRepo := repositories.NewUserRepo(*userRepoCfg)
 	userService := services.NewUserService(userRepo)
@@ -25,6 +24,14 @@ func SetupRouter() *http.ServeMux {
 
 	// Register routes
 	RegisterUserRoutes(router, userHandler)
+
+	eventRepoCfg := repositories.NewEventRepoConfig(os.Getenv("AZURE_STORAGE_ACCOUNT_NAME"), os.Getenv("AZURE_STORAGE_ACCOUNT_KEY"), os.Getenv("AZURE_STORAGE_SERVICE_URL"))
+	eventRepo := repositories.NewEventRepo(*eventRepoCfg)
+	eventService := services.NewEventService(eventRepo)
+
+	eventHandler := handlers.NewEventHandler(eventService)
+
+	RegisterEventRoutes(router, eventHandler)
 
 	// API information endpoint
 	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {

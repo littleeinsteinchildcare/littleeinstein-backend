@@ -51,7 +51,7 @@ func (h *UserHandler) GetUser(w http.ResponseWriter, r *http.Request) {
 func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	success := true
 	msg := "User Created Successfully"
-	userData, err := DecodeRequest(r)
+	userData, err := DecodeUserRequest(r)
 	if err != nil {
 		fmt.Printf("Error: %v", err)
 	}
@@ -83,7 +83,7 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-func DecodeRequest(r *http.Request) (map[string]interface{}, error) {
+func DecodeUserRequest(r *http.Request) (map[string]interface{}, error) {
 	var userData map[string]interface{}
 	err := json.NewDecoder(r.Body).Decode(&userData)
 	if err != nil {
