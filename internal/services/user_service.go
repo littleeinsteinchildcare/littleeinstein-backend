@@ -5,7 +5,7 @@ import (
 	"littleeinsteinchildcare/backend/internal/models"
 )
 
-const TABLENAME = "UsersTable"
+const USERSTABLE = "UsersTable"
 
 // UserRepo interface methods implemented in repositories package
 type UserRepo interface {
@@ -25,7 +25,7 @@ func NewUserService(r UserRepo) *UserService {
 
 // GetUserByID handles calling the UserRepository GetUser function and returns the result of a query by the UserRepository
 func (s *UserService) GetUserByID(id string) (models.User, error) {
-	user, err := s.repo.GetUser(TABLENAME, id)
+	user, err := s.repo.GetUser(USERSTABLE, id)
 	if err != nil {
 		return models.User{}, err
 	}
@@ -35,7 +35,7 @@ func (s *UserService) GetUserByID(id string) (models.User, error) {
 
 // CreateUser returns an error on a failed UserRepo call
 func (s *UserService) CreateUser(user models.User) error {
-	err := s.repo.CreateUser(TABLENAME, user)
+	err := s.repo.CreateUser(USERSTABLE, user)
 	if err != nil {
 		return err
 	}

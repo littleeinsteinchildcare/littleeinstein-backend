@@ -3,9 +3,9 @@ package repositories
 import (
 	"context"
 	"encoding/json"
+	"littleeinsteinchildcare/backend/internal/handlers"
 	"littleeinsteinchildcare/backend/internal/models"
 	"littleeinsteinchildcare/backend/internal/services"
-	"log"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/data/aztables"
 )
@@ -34,9 +34,9 @@ type UserRepository struct {
 // NewUserRepo creates and returns a new, unconnected UserRepo object
 func NewUserRepo(cfg UserRepoConfig) services.UserRepo {
 	cred, err := aztables.NewSharedKeyCredential(cfg.accountName, cfg.accountKey)
-	handle(err)
+	handlers.Handle(err)
 	client, err := aztables.NewServiceClientWithSharedKey(cfg.serviceEndpointURL, cred, nil)
-	handle(err)
+	handlers.Handle(err)
 	return &UserRepository{serviceClient: *client}
 }
 
@@ -58,7 +58,7 @@ func (repo *UserRepository) CreateUser(tableName string, user models.User) error
 
 	//https://pkg.go.dev/encoding/json
 	serializedEntity, err := json.Marshal(userEntity)
-	handle(err)
+	handlers.Handle(err)
 
 	//TODO: Better handling?
 	_, err = repo.serviceClient.CreateTable(context.Background(), tableName, nil)
@@ -86,7 +86,7 @@ func (repo *UserRepository) GetUser(tableName string, id string) (models.User, e
 
 	var myEntity aztables.EDMEntity
 	err = json.Unmarshal(resp.Value, &myEntity)
-	handle(err)
+	handlers.Handle(err)
 
 	user := models.User{
 		ID:    myEntity.RowKey,
@@ -96,11 +96,4 @@ func (repo *UserRepository) GetUser(tableName string, id string) (models.User, e
 	}
 
 	return user, nil
-}
-
-// Generic error handler
-func handle(err error) {
-	if err != nil {
-		log.Fatalf("Error: %v\n", err)
-	}
 }
