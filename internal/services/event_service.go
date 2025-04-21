@@ -25,10 +25,14 @@ func NewEventService(r EventRepo) *EventService {
 
 // GetEventByID handles calling the EventRepository GetEvent function and returns the result of a query by the EventRepository
 func (s *EventService) GetEventByID(id string) (models.Event, error) {
+
 	event, err := s.repo.GetEvent(EVENTSTABLE, id)
 	if err != nil {
 		return models.Event{}, err
 	}
+
+	fmt.Print("** In GET EVENT BY ID **\n")
+
 	fmt.Printf("Event: %v", event)
 	return event, nil
 }

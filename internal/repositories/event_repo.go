@@ -3,9 +3,12 @@ package repositories
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"littleeinsteinchildcare/backend/internal/handlers"
 	"littleeinsteinchildcare/backend/internal/models"
 	"littleeinsteinchildcare/backend/internal/services"
+	"os"
+	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/data/aztables"
 )
@@ -90,14 +93,33 @@ func (repo *EventRepository) GetEvent(tableName string, id string) (models.Event
 	err = json.Unmarshal(resp.Value, &myEntity)
 	handlers.Handle(err)
 
+	userRepoCfg := NewUserRepoConfig(os.Getenv("AZURE_STORAGE_ACCOUNT_NAME"), os.Getenv("AZURE_STORAGE_ACCOUNT_KEY"), os.Getenv("AZURE_STORAGE_SERVICE_URL"))
+	userRepo := NewUserRepo(*userRepoCfg)
+
+	creator, err := userRepo.GetUser("UsersTable", myEntity.Properties["Creator"].(string))
+
+	invitee_ids := strings.Split(myEntity.Properties["Invitees"].(string), ",")
+
+	for _, id := range invitee_ids {
+		fmt.Printf("%v ", id)
+	}
+
+	var invitees_list []models.User
+
+	for _, id := range invitee_ids {
+		user, err := userRepo.GetUser("UsersTable", id)
+		handlers.Handle(err)
+		invitees_list = append(invitees_list, user)
+	}
+
 	event := models.Event{
 		ID:        myEntity.RowKey,
-		EventName: myEntity.Properties["Eventname"].(string),
+		EventName: myEntity.Properties["EventName"].(string),
 		Date:      myEntity.Properties["Date"].(string),
 		StartTime: myEntity.Properties["StartTime"].(string),
 		EndTime:   myEntity.Properties["EndTime"].(string),
-		Creator:   myEntity.Properties["Creator"].(models.User),
-		Invitees:  myEntity.Properties["Invitees"].([]models.User),
+		Creator:   creator,
+		Invitees:  invitees_list,
 	}
 
 	return event, nil

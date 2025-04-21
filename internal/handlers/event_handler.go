@@ -35,6 +35,7 @@ func (h *EventHandler) GetEvent(w http.ResponseWriter, r *http.Request) {
 		fmt.Printf("Error retrieving user: %v", err)
 	}
 
+	fmt.Print("IN GETEVENT\n")
 	response := map[string]interface{}{
 		"id":        id,
 		"eventname": event.EventName,
