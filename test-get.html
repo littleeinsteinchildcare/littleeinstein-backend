@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Image Retrieval Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        #imageContainer {
+            margin-top: 20px;
+        }
+        img {
+            max-width: 100%;
+            border: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test Image Retrieval</h1>
+    
+    <div class="form-group">
+        <label for="imageId">Image ID:</label>
+        <input type="text" id="imageId" placeholder="Enter the image ID">
+    </div>
+    
+    <div class="form-group">
+        <label for="fileName">File Name:</label>
+        <input type="text" id="fileName" placeholder="Enter the file name">
+    </div>
+    
+    <button onclick="fetchImage()">Fetch Image</button>
+    
+    <div id="imageContainer"></div>
+    
+    <script>
+        function fetchImage() {
+            const imageId = document.getElementById('imageId').value.trim();
+            const fileName = document.getElementById('fileName').value.trim();
+            
+            if (!imageId || !fileName) {
+                alert('Please enter both Image ID and File Name');
+                return;
+            }
+            
+            const imageUrl = `http://localhost:8080/api/images/${imageId}/${fileName}`;
+            const imageContainer = document.getElementById('imageContainer');
+            
+            // Clear previous content
+            imageContainer.innerHTML = '';
+            
+            // Create image element
+            const img = document.createElement('img');
+            img.src = imageUrl;
+            img.alt = fileName;
+            
+            // Add loading message
+            const loadingMsg = document.createElement('p');
+            loadingMsg.textContent = 'Loading image...';
+            imageContainer.appendChild(loadingMsg);
+            
+            // Handle image load success
+            img.onload = function() {
+                imageContainer.innerHTML = '';
+                imageContainer.appendChild(img);
+                
+                const urlDisplay = document.createElement('p');
+                urlDisplay.innerHTML = `<strong>Image URL:</strong> <a href="${imageUrl}" target="_blank">${imageUrl}</a>`;
+                imageContainer.appendChild(urlDisplay);
+            };
+            
+            // Handle image load error
+            img.onerror = function() {
+                imageContainer.innerHTML = '';
+                const errorMsg = document.createElement('p');
+                errorMsg.style.color = 'red';
+                errorMsg.textContent = `Error: Could not load image at ${imageUrl}`;
+                imageContainer.appendChild(errorMsg);
+            };
+        }
+    </script>
+</body>
+</html>

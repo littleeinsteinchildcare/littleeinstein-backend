@@ -214,3 +214,64 @@ git clone https://github.com/littleeinsteinchildcare/littleeinstein-backend.git
    ```
 
 Now your repository is set up with **pre-commit**, and hooks will run automatically on `git commit -m "Message"`!
+
+## Azure Blob Storage Image API
+
+This backend now includes image handling using Azure Blob Storage. Here are the key features:
+
+- Upload images to Azure Blob Storage
+- Generate unique IDs for each image
+- Retrieve images by ID and file name
+
+### Configuration
+
+1. Edit the `configs/config.json` file or set the following environment variables:
+
+```
+AZURE_ACCOUNT_NAME
+AZURE_ACCOUNT_KEY
+AZURE_CONTAINER_NAME
+PORT (optional, defaults to 8080)
+```
+
+### API Endpoints
+
+#### Upload an Image
+
+```
+POST /api/images
+```
+
+**Request:**
+- Content-Type: multipart/form-data
+- Body: form-data with a field named "image" containing the image file
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Image uploaded successfully",
+  "image": {
+    "id": "unique-generated-id",
+    "name": "example.jpg",
+    "url": "https://your-storage-account.blob.core.windows.net/images/unique-generated-id/example.jpg",
+    "contentType": "image/jpeg",
+    "size": 12345,
+    "uploadedAt": "2023-04-23T15:30:45Z"
+  }
+}
+```
+
+#### Get an Image
+
+```
+GET /api/images/{id}/{fileName}
+```
+
+**Parameters:**
+- id: The unique ID of the image
+- fileName: The original file name of the image
+
+**Response:**
+- Content-Type: image/* (the original content type of the image)
+- Body: The image data
