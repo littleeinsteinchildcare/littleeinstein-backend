@@ -275,3 +275,27 @@ GET /api/images/{id}/{fileName}
 **Response:**
 - Content-Type: image/* (the original content type of the image)
 - Body: The image data
+
+## Testing the API
+Can test the POST and GET endpoints with:
+- test-get.html
+- test-upload.html
+
+Make sure that when getting the image, you use the name of the image + file extension, i.e. if you uploaded "test.png", this is the image you're going to get.
+To Access Images or the "Account Key" (config file or environment variable) in the Azure Portal:
+1. Search up Storage Accounts in the top search menu and click on it.
+2. Click on "licstorage".
+3. For Access Keys: 
+   - Click on the "Security + networking" dropdown on the left.
+   - Click on "Access keys".
+   - Copy the "key1" Key Value, not the connection strirng.
+4. For Images:
+   - Click on "Storage browser" in the left menu.
+   - Click on the "Blob containers" dropdown.
+   - Click on the "licstorage" folder.
+     - From there, each image is in a folder, the folder name is the unique ID, and the image name is the file name.
+   - Click on the folder, then the image to view the image.
+   - At the bottom of the image, you can copy the key value as the ID.
+   - Or, at the top, just below the "Overview", you should be able to see:
+   - Blob: ID/ImageName
+   - Copy those and use them to test the GET endpoint.
