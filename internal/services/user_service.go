@@ -1,7 +1,6 @@
 package services
 
 import (
-	"fmt"
 	"littleeinsteinchildcare/backend/internal/models"
 )
 
@@ -11,6 +10,7 @@ const USERSTABLE = "UsersTable"
 type UserRepo interface {
 	CreateUser(tableName string, user models.User) error
 	GetUser(tableName string, id string) (models.User, error)
+	DeleteUser(tableName string, id string) (bool, error)
 }
 
 // UserService contains and handles a specific UserRepository object
@@ -29,7 +29,6 @@ func (s *UserService) GetUserByID(id string) (models.User, error) {
 	if err != nil {
 		return models.User{}, err
 	}
-	fmt.Printf("User: %v", user)
 	return user, nil
 }
 
@@ -40,4 +39,12 @@ func (s *UserService) CreateUser(user models.User) error {
 		return err
 	}
 	return nil
+}
+
+func (s *UserService) DeleteUserByID(id string) (bool, error) {
+	success, err := s.repo.DeleteUser(USERSTABLE, id)
+	if err != nil {
+		return success, err
+	}
+	return success, nil
 }

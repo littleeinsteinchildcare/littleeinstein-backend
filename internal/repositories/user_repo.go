@@ -97,3 +97,17 @@ func (repo *UserRepository) GetUser(tableName string, id string) (models.User, e
 
 	return user, nil
 }
+
+func (repo *UserRepository) DeleteUser(tableName string, id string) (bool, error) {
+	ctx := context.Background()
+	pKey := "Users"
+	tableClient := repo.serviceClient.NewClient(tableName)
+
+	_, err := tableClient.DeleteEntity(ctx, pKey, id, nil)
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
+
+}

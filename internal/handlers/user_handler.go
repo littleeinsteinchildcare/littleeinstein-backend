@@ -11,6 +11,7 @@ import (
 type UserService interface {
 	CreateUser(user models.User) error
 	GetUserByID(id string) (models.User, error)
+	DeleteUserByID(id string) (bool, error)
 }
 
 // UserHandler handles HTTP requests related to users
@@ -43,6 +44,22 @@ func (h *UserHandler) GetUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Return JSON response
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+func (h *UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+
+	success, err := h.userService.DeleteUserByID(id)
+	if err != nil {
+		fmt.Printf("Error deleting user: %v", err)
+	}
+
+	response := map[string]interface{}{
+		"id":      id,
+		"success": success,
+	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
 }
