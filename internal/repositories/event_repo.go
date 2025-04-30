@@ -46,8 +46,6 @@ func NewEventRepo(cfg EventRepoConfig) services.EventRepo {
 // CreateEvent creates an aztable entity in the specified table name, creating the table if it doesn't exist
 func (repo *EventRepository) CreateEvent(tableName string, event models.Event) error {
 
-	fmt.Printf("INSIDE REPO CREATE EVENT\n")
-
 	var invitee_ids []string
 	for _, user := range event.Invitees {
 		invitee_ids = append(invitee_ids, user.ID)
@@ -70,8 +68,6 @@ func (repo *EventRepository) CreateEvent(tableName string, event models.Event) e
 		},
 	}
 
-	fmt.Printf("AFTER CREATING ENTITY: Entity is %v\n", eventEntity)
-
 	//https://pkg.go.dev/encoding/json
 	serializedEntity, err := json.Marshal(eventEntity)
 	handlers.Handle(err)
@@ -82,7 +78,6 @@ func (repo *EventRepository) CreateEvent(tableName string, event models.Event) e
 
 	_, err = tableClient.AddEntity(context.Background(), serializedEntity, nil)
 	if err != nil {
-		fmt.Printf("ERR IS NOT NIL\n")
 		return err
 	}
 	return nil

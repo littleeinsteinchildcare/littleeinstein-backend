@@ -72,6 +72,36 @@ func (repo *UserRepository) CreateUser(tableName string, user models.User) error
 	return nil
 }
 
+func (repo *UserRepository) UpdateUser(tableName string, user models.User) error {
+	ctx := context.Background()
+	tableClient := repo.serviceClient.NewClient(tableName)
+
+	currUser, err := repo.GetUser(tableName, user.ID)
+	handlers.Handle(err)
+
+	currUser.UpdateFields(user)
+
+	userEntity := aztables.EDMEntity{
+		Entity: aztables.Entity{
+			PartitionKey: "Users",
+			RowKey:       currUser.ID,
+		},
+		Properties: map[string]any{
+			"Username": currUser.Name,
+			"Email":    currUser.Email,
+			"Role":     currUser.Role,
+		},
+	}
+
+	serializedEntity, err := json.Marshal(userEntity)
+	handlers.Handle(err)
+	_, err = tableClient.UpdateEntity(ctx, serializedEntity, nil)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // GetUser retrieves and stores entity data in a User object
 func (repo *UserRepository) GetUser(tableName string, id string) (models.User, error) {
 

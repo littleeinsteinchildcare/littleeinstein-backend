@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"littleeinsteinchildcare/backend/internal/models"
 	"net/http"
 )
@@ -12,6 +13,7 @@ type UserService interface {
 	CreateUser(user models.User) error
 	GetUserByID(id string) (models.User, error)
 	DeleteUserByID(id string) (bool, error)
+	UpdateUser(user models.User) error
 }
 
 // UserHandler handles HTTP requests related to users
@@ -48,6 +50,26 @@ func (h *UserHandler) GetUser(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
+// Update User
+func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
+
+	newData, err := io.ReadAll(r.Body)
+
+	if err != nil {
+		fmt.Printf("Error reading data from request: %v", err)
+	}
+
+	var user models.User
+	if err := json.Unmarshal(newData, &user); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	fmt.Printf("New Data for user: %v\n", user)
+
+	h.userService.UpdateUser(user)
+
+}
 func (h *UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 

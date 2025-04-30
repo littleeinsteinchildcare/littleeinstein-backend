@@ -11,6 +11,7 @@ type UserRepo interface {
 	CreateUser(tableName string, user models.User) error
 	GetUser(tableName string, id string) (models.User, error)
 	DeleteUser(tableName string, id string) (bool, error)
+	UpdateUser(tableName string, user models.User) error
 }
 
 // UserService contains and handles a specific UserRepository object
@@ -35,6 +36,14 @@ func (s *UserService) GetUserByID(id string) (models.User, error) {
 // CreateUser returns an error on a failed UserRepo call
 func (s *UserService) CreateUser(user models.User) error {
 	err := s.repo.CreateUser(USERSTABLE, user)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *UserService) UpdateUser(user models.User) error {
+	err := s.repo.UpdateUser(USERSTABLE, user)
 	if err != nil {
 		return err
 	}
