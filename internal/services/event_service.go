@@ -11,6 +11,7 @@ const EVENTSTABLE = "EventsTable"
 type EventRepo interface {
 	CreateEvent(tableName string, event models.Event) error
 	GetEvent(tableName string, id string) (models.Event, error)
+	DeleteEvent(tableName string, id string) (bool, error)
 }
 
 // EventService contains and handles a specific EventRepository object
@@ -31,8 +32,6 @@ func (s *EventService) GetEventByID(id string) (models.Event, error) {
 		return models.Event{}, err
 	}
 
-	fmt.Print("** In GET EVENT BY ID **\n")
-
 	fmt.Printf("Event: %v", event)
 	return event, nil
 }
@@ -44,4 +43,12 @@ func (s *EventService) CreateEvent(event models.Event) error {
 		return err
 	}
 	return nil
+}
+
+func (s *EventService) DeleteEventByID(id string) (bool, error) {
+	success, err := s.repo.DeleteEvent(EVENTSTABLE, id)
+	if err != nil {
+		return success, err
+	}
+	return success, nil
 }

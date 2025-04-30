@@ -5,23 +5,27 @@ import (
 	"fmt"
 	"littleeinsteinchildcare/backend/internal/models"
 	"net/http"
+	"strings"
 )
 
 // EventService interface implemented in services package
 type EventService interface {
 	CreateEvent(user models.Event) error
 	GetEventByID(id string) (models.Event, error)
+	DeleteEventByID(id string) (bool, error)
 }
 
 // EventHandler handles HTTP requests related to users
 type EventHandler struct {
 	eventService EventService
+	userService  UserService
 }
 
 // NewEventHandler creates a new event handler
-func NewEventHandler(s EventService) *EventHandler {
+func NewEventHandler(s EventService, us UserService) *EventHandler {
 	return &EventHandler{
 		eventService: s,
+		userService:  us,
 	}
 }
 
@@ -35,7 +39,6 @@ func (h *EventHandler) GetEvent(w http.ResponseWriter, r *http.Request) {
 		fmt.Printf("Error retrieving user: %v", err)
 	}
 
-	fmt.Print("IN GETEVENT\n")
 	response := map[string]interface{}{
 		"id":        id,
 		"eventname": event.EventName,
@@ -43,7 +46,7 @@ func (h *EventHandler) GetEvent(w http.ResponseWriter, r *http.Request) {
 		"starttime": event.StartTime,
 		"endtime":   event.EndTime,
 		"creator":   event.Creator,
-		"Invitees":  event.Invitees,
+		"invitees":  event.Invitees,
 	}
 
 	// Return JSON response
@@ -60,14 +63,25 @@ func (h *EventHandler) CreateEvent(w http.ResponseWriter, r *http.Request) {
 		fmt.Printf("Error: %v", err)
 	}
 
+	creator, err := h.userService.GetUserByID(eventData["creator"].(string))
+	// invitee_ids := eventData["invitees"].(string)
+	invitee_ids := strings.Split(eventData["invitees"].(string), ",")
+	var invitees_list []models.User
+
+	for _, id := range invitee_ids {
+		user, err := h.userService.GetUserByID(id)
+		Handle(err)
+		invitees_list = append(invitees_list, user)
+	}
+
 	event := models.Event{
 		ID:        eventData["id"].(string),
 		EventName: eventData["eventname"].(string),
 		Date:      eventData["date"].(string),
 		StartTime: eventData["starttime"].(string),
 		EndTime:   eventData["endtime"].(string),
-		Creator:   eventData["creator"].(models.User),
-		Invitees:  eventData["Invitees"].([]models.User),
+		Creator:   creator,
+		Invitees:  invitees_list,
 	}
 
 	err = h.eventService.CreateEvent(event)
@@ -85,10 +99,28 @@ func (h *EventHandler) CreateEvent(w http.ResponseWriter, r *http.Request) {
 		"starttime": event.StartTime,
 		"endtime":   event.EndTime,
 		"creator":   event.Creator,
+		"invitees":  event.Invitees,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(response)
+}
+
+func (h *EventHandler) DeleteEvent(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	success, err := h.eventService.DeleteEventByID(id)
+
+	if err != nil {
+		fmt.Printf("Error deleting event: %v", err)
+	}
+
+	response := map[string]interface{}{
+		"id":      id,
+		"success": success,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
 }
 

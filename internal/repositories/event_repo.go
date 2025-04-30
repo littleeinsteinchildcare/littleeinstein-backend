@@ -46,6 +46,14 @@ func NewEventRepo(cfg EventRepoConfig) services.EventRepo {
 // CreateEvent creates an aztable entity in the specified table name, creating the table if it doesn't exist
 func (repo *EventRepository) CreateEvent(tableName string, event models.Event) error {
 
+	fmt.Printf("INSIDE REPO CREATE EVENT\n")
+
+	var invitee_ids []string
+	for _, user := range event.Invitees {
+		invitee_ids = append(invitee_ids, user.ID)
+	}
+	ids_string := strings.Join(invitee_ids, ",")
+
 	//https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/sdk/data/aztables
 	eventEntity := aztables.EDMEntity{
 		Entity: aztables.Entity{
@@ -53,14 +61,16 @@ func (repo *EventRepository) CreateEvent(tableName string, event models.Event) e
 			RowKey:       event.ID,
 		},
 		Properties: map[string]any{
-			"Eventname": event.EventName,
+			"EventName": event.EventName,
 			"Date":      event.Date,
 			"StartTime": event.StartTime,
 			"EndTime":   event.EndTime,
-			"Creator":   event.Creator,
-			"Invitees":  event.Invitees,
+			"Creator":   event.Creator.ID,
+			"Invitees":  ids_string,
 		},
 	}
+
+	fmt.Printf("AFTER CREATING ENTITY: Entity is %v\n", eventEntity)
 
 	//https://pkg.go.dev/encoding/json
 	serializedEntity, err := json.Marshal(eventEntity)
@@ -72,6 +82,7 @@ func (repo *EventRepository) CreateEvent(tableName string, event models.Event) e
 
 	_, err = tableClient.AddEntity(context.Background(), serializedEntity, nil)
 	if err != nil {
+		fmt.Printf("ERR IS NOT NIL\n")
 		return err
 	}
 	return nil
@@ -123,4 +134,17 @@ func (repo *EventRepository) GetEvent(tableName string, id string) (models.Event
 	}
 
 	return event, nil
+}
+
+func (repo *EventRepository) DeleteEvent(tableName string, id string) (bool, error) {
+	ctx := context.Background()
+	pKey := "Events"
+	tableClient := repo.serviceClient.NewClient(tableName)
+
+	_, err := tableClient.DeleteEntity(ctx, pKey, id, nil)
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
 }

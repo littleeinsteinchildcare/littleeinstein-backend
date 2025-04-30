@@ -29,7 +29,7 @@ func SetupRouter() *http.ServeMux {
 	eventRepo := repositories.NewEventRepo(*eventRepoCfg)
 	eventService := services.NewEventService(eventRepo)
 
-	eventHandler := handlers.NewEventHandler(eventService)
+	eventHandler := handlers.NewEventHandler(eventService, userService)
 
 	RegisterEventRoutes(router, eventHandler)
 

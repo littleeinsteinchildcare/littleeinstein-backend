@@ -109,5 +109,4 @@ func (repo *UserRepository) DeleteUser(tableName string, id string) (bool, error
 	}
 
 	return true, nil
-
 }
