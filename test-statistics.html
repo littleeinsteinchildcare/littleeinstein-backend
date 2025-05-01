@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Image Statistics Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+        #statsContainer {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            display: none;
+        }
+        .stat-item {
+            margin-bottom: 10px;
+            padding: 8px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+        }
+        .stat-label {
+            font-weight: bold;
+            display: inline-block;
+            width: 150px;
+        }
+        .size-info {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #ddd;
+        }
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Image Statistics Dashboard</h1>
+    
+    <button onclick="fetchStatistics()">Fetch Image Statistics</button>
+    
+    <div id="statsContainer"></div>
+    
+    <script>
+        function formatBytes(bytes, decimals = 2) {
+            if (bytes === 0) return '0 Bytes';
+            
+            const k = 1024;
+            const dm = decimals < 0 ? 0 : decimals;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+            
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+        }
+        
+        function fetchStatistics() {
+            const statsContainer = document.getElementById('statsContainer');
+            
+            // Show loading message
+            statsContainer.style.display = 'block';
+            statsContainer.innerHTML = '<p>Loading statistics...</p>';
+            
+            // Fetch statistics from the API
+            fetch('http://localhost:8080/api/images/statistics')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Clear container
+                    statsContainer.innerHTML = '';
+                    
+                    if (!data.success) {
+                        statsContainer.innerHTML = `<div class="error">Error: ${data.message}</div>`;
+                        return;
+                    }
+                    
+                    const stats = data.statistics;
+                    
+                    // Create statistics display
+                    const items = [
+                        { label: 'Total Images', value: stats.totalImages },
+                        { label: 'Total Size', value: formatBytes(stats.totalSize) },
+                        { label: 'Average Size', value: formatBytes(stats.averageSize) },
+                        { label: 'Largest Image', value: formatBytes(stats.largestImage) },
+                        { label: 'Smallest Image', value: formatBytes(stats.smallestImage) }
+                    ];
+                    
+                    // Add each statistic
+                    items.forEach(item => {
+                        const element = document.createElement('div');
+                        element.className = 'stat-item';
+                        element.innerHTML = `<span class="stat-label">${item.label}:</span> ${item.value}`;
+                        statsContainer.appendChild(element);
+                    });
+                    
+                    // Add size limit information
+                    const sizeInfo = document.createElement('div');
+                    sizeInfo.className = 'size-info';
+                    sizeInfo.innerHTML = `
+                        <h3>Upload Size Limit</h3>
+                        <div class="stat-item">
+                            <span class="stat-label">Maximum Size:</span> ${formatBytes(data.sizeLimit)}
+                        </div>
+                    `;
+                    statsContainer.appendChild(sizeInfo);
+                })
+                .catch(error => {
+                    statsContainer.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+                });
+        }
+    </script>
+</body>
+</html>

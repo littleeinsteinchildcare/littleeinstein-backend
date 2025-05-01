@@ -13,6 +13,14 @@ import (
 	"github.com/littleeinsteinchildcare/beast/models"
 )
 
+// BlobStorageInterface defines the interface for storage services
+// This allows us to swap implementations (Azure or local) for testing
+type BlobStorageInterface interface {
+	UploadImage(ctx context.Context, fileName string, contentType string, data []byte) (*models.Image, error)
+	GetImage(ctx context.Context, imageID, fileName string) ([]byte, string, error)
+	DeleteImage(ctx context.Context, imageID, fileName string) error
+}
+
 type BlobStorageService struct {
 	containerURL azblob.ContainerURL
 }
@@ -127,4 +135,16 @@ func (s *BlobStorageService) GetImage(ctx context.Context, imageID, fileName str
 	contentType := downloadResponse.ContentType()
 
 	return buffer.Bytes(), contentType, nil
+}
+
+func (s *BlobStorageService) DeleteImage(ctx context.Context, imageID, fileName string) error {
+	// Construct the blob name from the image ID and file name
+	blobName := fmt.Sprintf("%s/%s", imageID, fileName)
+
+	// Get a reference to the blob
+	blobURL := s.containerURL.NewBlockBlobURL(blobName)
+
+	// Delete the blob
+	_, err := blobURL.Delete(ctx, azblob.DeleteSnapshotsOptionNone, azblob.BlobAccessConditions{})
+	return err
 }

@@ -10,4 +10,8 @@ func SetupRoutes(r *mux.Router, imageController *controllers.ImageController) {
 	// Image routes
 	r.HandleFunc("/api/images", imageController.UploadImage).Methods("POST")
 	r.HandleFunc("/api/images/{id}/{fileName}", imageController.GetImage).Methods("GET")
+	r.HandleFunc("/api/images/{id}/{fileName}", imageController.DeleteImage).Methods("DELETE")
+	
+	// Statistics route
+	r.HandleFunc("/api/images/statistics", imageController.GetStatistics).Methods("GET")
 }
