@@ -1,13 +1,13 @@
 package config
 
 // Config holds application configuration
-type Config struct {
+type ServerConfig struct {
 	Port int
 }
 
 // Load returns the application configuration
-func Load() *Config {
-	return &Config{
+func LoadServerConfig() *ServerConfig {
+	return &ServerConfig{
 		Port: 8080,
 	}
 }

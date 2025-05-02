@@ -7,6 +7,6 @@ import (
 // Generic error handler
 func Handle(err error) {
 	if err != nil {
-		log.Fatalf("Error: %v\n", err)
+		log.Fatalf("%v\n", err)
 	}
 }

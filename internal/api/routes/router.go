@@ -1,12 +1,12 @@
 package routes
 
 import (
-	"net/http"
-	"os"
-
+	"littleeinsteinchildcare/backend/internal/config"
 	"littleeinsteinchildcare/backend/internal/handlers"
 	"littleeinsteinchildcare/backend/internal/repositories"
 	"littleeinsteinchildcare/backend/internal/services"
+	"log"
+	"net/http"
 )
 
 // SetupRouter configures and returns the main router
@@ -15,8 +15,14 @@ func SetupRouter() *http.ServeMux {
 	router := http.NewServeMux()
 
 	// Initialize repositories, services, and handlers
-	userRepoCfg := repositories.NewUserRepoConfig(os.Getenv("AZURE_STORAGE_ACCOUNT_NAME"), os.Getenv("AZURE_STORAGE_ACCOUNT_KEY"), os.Getenv("AZURE_STORAGE_SERVICE_URL"))
-	userRepo := repositories.NewUserRepo(*userRepoCfg)
+	azTableCfg, err := config.LoadAzTableConfig()
+	handlers.Handle(err)
+
+	// userRepoCfg := repositories.NewUserRepoConfig(os.Getenv("AZURE_STORAGE_ACCOUNT_NAME"), os.Getenv("AZURE_STORAGE_ACCOUNT_KEY"), os.Getenv("AZURE_STORAGE_SERVICE_URL"))
+	userRepo, err := repositories.NewUserRepo(*azTableCfg)
+	if err != nil {
+		log.Fatalf("Router.SetupRouter: %v", err)
+	}
 	userService := services.NewUserService(userRepo)
 
 	// Create a handler without actual dependencies for now
@@ -25,8 +31,7 @@ func SetupRouter() *http.ServeMux {
 	// Register routes
 	RegisterUserRoutes(router, userHandler)
 
-	eventRepoCfg := repositories.NewEventRepoConfig(os.Getenv("AZURE_STORAGE_ACCOUNT_NAME"), os.Getenv("AZURE_STORAGE_ACCOUNT_KEY"), os.Getenv("AZURE_STORAGE_SERVICE_URL"))
-	eventRepo := repositories.NewEventRepo(*eventRepoCfg)
+	eventRepo := repositories.NewEventRepo(*azTableCfg)
 	eventService := services.NewEventService(eventRepo)
 
 	eventHandler := handlers.NewEventHandler(eventService, userService)

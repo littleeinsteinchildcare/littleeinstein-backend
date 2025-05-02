@@ -3,28 +3,15 @@ package repositories
 import (
 	"context"
 	"encoding/json"
-	"littleeinsteinchildcare/backend/internal/handlers"
+	"fmt"
+	"littleeinsteinchildcare/backend/internal/config"
 	"littleeinsteinchildcare/backend/internal/models"
 	"littleeinsteinchildcare/backend/internal/services"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/data/aztables"
 )
 
-// UserRepoConfig stores connection information to be passed in to the UserRepo constructor
-type UserRepoConfig struct {
-	accountName        string
-	accountKey         string
-	serviceEndpointURL string
-}
-
-// NewUserRepoConfig constructs a new UserRepoConfig object and returns it
-func NewUserRepoConfig(name string, key string, url string) *UserRepoConfig {
-	return &UserRepoConfig{
-		accountName:        name,
-		accountKey:         key,
-		serviceEndpointURL: url,
-	}
-}
+const PartitionKey = "Users"
 
 // UserRepo handles Database access
 type UserRepository struct {
@@ -32,12 +19,16 @@ type UserRepository struct {
 }
 
 // NewUserRepo creates and returns a new, unconnected UserRepo object
-func NewUserRepo(cfg UserRepoConfig) services.UserRepo {
-	cred, err := aztables.NewSharedKeyCredential(cfg.accountName, cfg.accountKey)
-	handlers.Handle(err)
-	client, err := aztables.NewServiceClientWithSharedKey(cfg.serviceEndpointURL, cred, nil)
-	handlers.Handle(err)
-	return &UserRepository{serviceClient: *client}
+func NewUserRepo(cfg config.AzTableConfig) (services.UserRepo, error) {
+	cred, err := aztables.NewSharedKeyCredential(cfg.AzureAccountName, cfg.AzureAccountKey)
+	if err != nil {
+		return nil, fmt.Errorf("UserRepository.NewUserRepo: Failed to create credentials: %w", err)
+	}
+	client, err := aztables.NewServiceClientWithSharedKey(cfg.AzureContainerName, cred, nil)
+	if err != nil {
+		return nil, fmt.Errorf("UserRepository.NewUserRepo: Failed to initialize service client: %w", err)
+	}
+	return &UserRepository{serviceClient: *client}, nil
 }
 
 // CreateUser creates an aztable entity in the specified table name, creating the table if it doesn't exist
@@ -46,7 +37,7 @@ func (repo *UserRepository) CreateUser(tableName string, user models.User) error
 	//https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/sdk/data/aztables
 	userEntity := aztables.EDMEntity{
 		Entity: aztables.Entity{
-			PartitionKey: "Users",
+			PartitionKey: PartitionKey,
 			RowKey:       user.ID,
 		},
 		Properties: map[string]any{
@@ -58,65 +49,72 @@ func (repo *UserRepository) CreateUser(tableName string, user models.User) error
 
 	//https://pkg.go.dev/encoding/json
 	serializedEntity, err := json.Marshal(userEntity)
-	handlers.Handle(err)
+	if err != nil {
+		return fmt.Errorf("UserRepository.CreateUser: Failed to serialize userEntity: %w", err)
+	}
 
 	//TODO: Better handling?
 	_, err = repo.serviceClient.CreateTable(context.Background(), tableName, nil)
-
 	tableClient := repo.serviceClient.NewClient(tableName)
-
 	_, err = tableClient.AddEntity(context.Background(), serializedEntity, nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("UserRepository.CreateUser: Failed to add entity to table %s: %w", tableName, err)
 	}
 	return nil
 }
 
-func (repo *UserRepository) UpdateUser(tableName string, user models.User) error {
+func (repo *UserRepository) UpdateUser(tableName string, newUserData models.User) (models.User, error) {
 	ctx := context.Background()
 	tableClient := repo.serviceClient.NewClient(tableName)
 
-	currUser, err := repo.GetUser(tableName, user.ID)
-	handlers.Handle(err)
-
-	currUser.UpdateFields(user)
+	user, err := repo.GetUser(tableName, newUserData.ID)
+	if err != nil {
+		return models.User{}, fmt.Errorf("UserRepository.UpdateUser: Failed to retrieve user ID %s from %s: %w", newUserData.ID, tableName, err)
+	}
+	err = user.UpdateFields(newUserData)
+	if err != nil {
+		return models.User{}, fmt.Errorf("UserRepository.UpdateUser: Failed to update user ID %s's fields: %w", user.ID, err)
+	}
 
 	userEntity := aztables.EDMEntity{
 		Entity: aztables.Entity{
-			PartitionKey: "Users",
-			RowKey:       currUser.ID,
+			PartitionKey: PartitionKey,
+			RowKey:       user.ID,
 		},
 		Properties: map[string]any{
-			"Username": currUser.Name,
-			"Email":    currUser.Email,
-			"Role":     currUser.Role,
+			"Username": user.Name,
+			"Email":    user.Email,
+			"Role":     user.Role,
 		},
 	}
 
 	serializedEntity, err := json.Marshal(userEntity)
-	handlers.Handle(err)
+	if err != nil {
+		return models.User{}, fmt.Errorf("UserRepository.UpdateUser: Failed to serialize user data: %w", err)
+	}
 	_, err = tableClient.UpdateEntity(ctx, serializedEntity, nil)
 	if err != nil {
-		return err
+		return models.User{}, fmt.Errorf("UserRepository.UpdateEntity: Failed to update entity in %s: %w", tableName, err)
 	}
-	return nil
+	return user, nil
 }
 
 // GetUser retrieves and stores entity data in a User object
 func (repo *UserRepository) GetUser(tableName string, id string) (models.User, error) {
 
 	ctx := context.Background()
-	pKey := "Users"
 	tableClient := repo.serviceClient.NewClient(tableName)
 
-	resp, err := tableClient.GetEntity(ctx, pKey, id, nil)
+	resp, err := tableClient.GetEntity(ctx, PartitionKey, id, nil)
 	if err != nil {
-		return models.User{}, err
+		return models.User{}, fmt.Errorf("UserRepository.GetUser: Failed to retrieve entity from %s: %w", tableName, err)
 	}
 
 	var myEntity aztables.EDMEntity
 	err = json.Unmarshal(resp.Value, &myEntity)
-	handlers.Handle(err)
+	if err != nil {
+		return models.User{}, fmt.Errorf("UserRepository.GetUser: Failed to deserialize entity: %w", err)
+	}
 
 	user := models.User{
 		ID:    myEntity.RowKey,
@@ -128,15 +126,14 @@ func (repo *UserRepository) GetUser(tableName string, id string) (models.User, e
 	return user, nil
 }
 
-func (repo *UserRepository) DeleteUser(tableName string, id string) (bool, error) {
+func (repo *UserRepository) DeleteUser(tableName string, id string) error {
 	ctx := context.Background()
-	pKey := "Users"
 	tableClient := repo.serviceClient.NewClient(tableName)
 
-	_, err := tableClient.DeleteEntity(ctx, pKey, id, nil)
+	_, err := tableClient.DeleteEntity(ctx, PartitionKey, id, nil)
 	if err != nil {
-		return false, err
+		return fmt.Errorf("UserRepository.DeleteUser: Failed to delete entity with ID %s from %s: %w", id, tableName, err)
 	}
 
-	return true, nil
+	return nil
 }

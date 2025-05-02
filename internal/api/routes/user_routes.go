@@ -13,5 +13,4 @@ func RegisterUserRoutes(router *http.ServeMux, userHandler *handlers.UserHandler
 	router.HandleFunc("PUT /users", userHandler.UpdateUser)
 	router.HandleFunc("DELETE /users/{id}", userHandler.DeleteUser)
 	router.HandleFunc("POST /users", userHandler.CreateUser)
-	// Add other routes as needed
 }

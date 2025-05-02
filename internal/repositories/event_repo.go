@@ -4,30 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"littleeinsteinchildcare/backend/internal/config"
 	"littleeinsteinchildcare/backend/internal/handlers"
 	"littleeinsteinchildcare/backend/internal/models"
 	"littleeinsteinchildcare/backend/internal/services"
-	"os"
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/data/aztables"
 )
-
-// EventRepoConfig stores connection information to be passed in to the EventRepo constructor
-type EventRepoConfig struct {
-	accountName        string
-	accountKey         string
-	serviceEndpointURL string
-}
-
-// NewEventRepoConfig constructs a new EventEventConfig object and returns it
-func NewEventRepoConfig(name string, key string, url string) *EventRepoConfig {
-	return &EventRepoConfig{
-		accountName:        name,
-		accountKey:         key,
-		serviceEndpointURL: url,
-	}
-}
 
 // EventRepo handles Database access
 type EventRepository struct {
@@ -35,10 +19,10 @@ type EventRepository struct {
 }
 
 // NewEventRepo creates and returns a new, unconnected EventRepo object
-func NewEventRepo(cfg EventRepoConfig) services.EventRepo {
-	cred, err := aztables.NewSharedKeyCredential(cfg.accountName, cfg.accountKey)
+func NewEventRepo(cfg config.AzTableConfig) services.EventRepo {
+	cred, err := aztables.NewSharedKeyCredential(cfg.AzureAccountName, cfg.AzureAccountKey)
 	handlers.Handle(err)
-	client, err := aztables.NewServiceClientWithSharedKey(cfg.serviceEndpointURL, cred, nil)
+	client, err := aztables.NewServiceClientWithSharedKey(cfg.AzureContainerName, cred, nil)
 	handlers.Handle(err)
 	return &EventRepository{serviceClient: *client}
 }
@@ -99,10 +83,12 @@ func (repo *EventRepository) GetEvent(tableName string, id string) (models.Event
 	err = json.Unmarshal(resp.Value, &myEntity)
 	handlers.Handle(err)
 
-	userRepoCfg := NewUserRepoConfig(os.Getenv("AZURE_STORAGE_ACCOUNT_NAME"), os.Getenv("AZURE_STORAGE_ACCOUNT_KEY"), os.Getenv("AZURE_STORAGE_SERVICE_URL"))
-	userRepo := NewUserRepo(*userRepoCfg)
+	cfg, err := config.LoadAzTableConfig()
+	handlers.Handle(err)
+	userRepo, err := NewUserRepo(*cfg)
 
 	creator, err := userRepo.GetUser("UsersTable", myEntity.Properties["Creator"].(string))
+	handlers.Handle(err)
 
 	invitee_ids := strings.Split(myEntity.Properties["Invitees"].(string), ",")
 

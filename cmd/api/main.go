@@ -14,12 +14,12 @@ import (
 func main() {
 	err := godotenv.Load()
 	if err != nil {
-		fmt.Println("Unable to find .env file")
+		log.Fatalf("Unable to find .env file")
 	}
 	fmt.Println("Starting API Server...")
 
 	// Load configuration
-	cfg := config.Load()
+	cfg := config.LoadServerConfig()
 
 	// Set up router with all routes
 	router := routes.SetupRouter()
