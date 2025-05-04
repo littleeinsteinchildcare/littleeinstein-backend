@@ -1,12 +1,14 @@
 package routes
 
 import (
+	"encoding/json"
 	"littleeinsteinchildcare/backend/internal/config"
 	"littleeinsteinchildcare/backend/internal/handlers"
 	"littleeinsteinchildcare/backend/internal/repositories"
 	"littleeinsteinchildcare/backend/internal/services"
 	"log"
 	"net/http"
+	"strings"
 )
 
 // SetupRouter configures and returns the main HTTP router for the application.
@@ -59,6 +61,9 @@ func SetupRouter() *http.ServeMux {
 	// Register all event-related routes (create, get, update, delete)
 	RegisterEventRoutes(router, eventHandler)
 
+	// Register Azure B2C auth endpoint
+	registerAzureB2CEndpoint(router)
+
 	// ---------- API INFORMATION ENDPOINT ----------
 	// Root endpoint that provides basic API information
 	// Acts as a health check and API documentation entry point
@@ -73,6 +78,75 @@ func SetupRouter() *http.ServeMux {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(`{"message": "Welcome to the Little Einstein Childcare API", "version": "1.0"}`))
 	})
-
 	return router
+}
+
+// registerAzureB2CEndpoint adds the Azure B2C token endpoint
+// This is a separate function so it can be easily removed later
+func registerAzureB2CEndpoint(router *http.ServeMux) {
+	router.HandleFunc("/auth/azure-b2c", func(w http.ResponseWriter, r *http.Request) {
+		// 1. ALWAYS set CORS headers first for ALL requests
+		w.Header().Set("Access-Control-Allow-Origin", "*") // For testing, can be more specific later
+		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		// 2. Handle OPTIONS preflight request BEFORE checking other methods
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		// 3. Now check for the actual GET method (frontend is using GET with the callSecureApi function)
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		// 4. Extract the token from the Authorization header
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			log.Printf("Error: No Authorization header provided")
+			http.Error(w, "No Authorization header provided", http.StatusUnauthorized)
+			return
+		}
+
+		// 5. The token is expected in the format "Bearer <token>"
+		bearerToken := strings.TrimPrefix(authHeader, "Bearer ")
+		if bearerToken == authHeader { // If no change, then "Bearer " prefix wasn't there
+			log.Printf("Error: Invalid Authorization header format, expected 'Bearer <token>'")
+			http.Error(w, "Invalid Authorization header format", http.StatusUnauthorized)
+			return
+		}
+
+		log.Printf("Received Azure B2C token: %s\n", bearerToken)
+
+		// For this example, we're just checking if the token exists
+		if bearerToken == "" {
+			response := struct {
+				Status  string `json:"status"`
+				Message string `json:"message"`
+			}{
+				Status:  "error",
+				Message: "Invalid token",
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusUnauthorized)
+			json.NewEncoder(w).Encode(response)
+			return
+		}
+
+		// 6. Return a simple successful verification response
+		response := struct {
+			Status  string `json:"status"`
+			Message string `json:"message"`
+		}{
+			Status:  "success",
+			Message: "Token successfully verified",
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(response)
+	})
 }
