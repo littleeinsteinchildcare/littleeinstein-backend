@@ -88,7 +88,8 @@ func registerAzureB2CEndpoint(router *http.ServeMux) {
 		// 1. ALWAYS set CORS headers first for ALL requests
 		w.Header().Set("Access-Control-Allow-Origin", "*") // For testing, can be more specific later
 		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+	        w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-User-ObjectId")
+
 
 		// 2. Handle OPTIONS preflight request BEFORE checking other methods
 		if r.Method == http.MethodOptions {
