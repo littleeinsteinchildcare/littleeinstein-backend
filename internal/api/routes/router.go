@@ -84,12 +84,11 @@ func SetupRouter() *http.ServeMux {
 // registerAzureB2CEndpoint adds the Azure B2C token endpoint
 // This is a separate function so it can be easily removed later
 func registerAzureB2CEndpoint(router *http.ServeMux) {
-	router.HandleFunc("/auth/azure-b2c", func(w http.ResponseWriter, r *http.Request) {
+	router.HandleFunc("/auth/azure-b2c/{id}", func(w http.ResponseWriter, r *http.Request) {
 		// 1. ALWAYS set CORS headers first for ALL requests
 		w.Header().Set("Access-Control-Allow-Origin", "*") // For testing, can be more specific later
 		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
-	        w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-User-ObjectId")
-
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 
 		// 2. Handle OPTIONS preflight request BEFORE checking other methods
 		if r.Method == http.MethodOptions {
@@ -102,6 +101,10 @@ func registerAzureB2CEndpoint(router *http.ServeMux) {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
+
+		// Only log ID for GET requests
+		id := r.PathValue("id")
+		log.Printf("Received request with ID: %s", id)
 
 		// 4. Extract the token from the Authorization header
 		authHeader := r.Header.Get("Authorization")
