@@ -12,6 +12,7 @@ type EventRepo interface {
 	CreateEvent(tableName string, event models.Event) error
 	GetEvent(tableName string, id string) (models.Event, error)
 	DeleteEvent(tableName string, id string) (bool, error)
+	UpdateEvent(tableNAme string, model models.Event) (models.Event, error)
 }
 
 // EventService contains and handles a specific EventRepository object

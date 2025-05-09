@@ -10,6 +10,7 @@ const USERSTABLE = "UsersTable"
 type UserRepo interface {
 	CreateUser(tableName string, user models.User) error
 	GetUser(tableName string, id string) (models.User, error)
+	GetAllUsers(tableName string) ([]models.User, error)
 	DeleteUser(tableName string, id string) error
 	UpdateUser(tableName string, user models.User) (models.User, error)
 }
@@ -31,6 +32,14 @@ func (s *UserService) GetUserByID(id string) (models.User, error) {
 		return models.User{}, err
 	}
 	return user, nil
+}
+
+func (s *UserService) GetAllUsers() ([]models.User, error) {
+	users, err := s.repo.GetAllUsers(USERSTABLE)
+	if err != nil {
+		return []models.User{}, err
+	}
+	return users, nil
 }
 
 // CreateUser returns an error on a failed UserRepo call

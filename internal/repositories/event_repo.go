@@ -13,6 +13,8 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/data/aztables"
 )
 
+const PKey = "Events"
+
 // EventRepo handles Database access
 type EventRepository struct {
 	serviceClient aztables.ServiceClient
@@ -27,54 +29,13 @@ func NewEventRepo(cfg config.AzTableConfig) services.EventRepo {
 	return &EventRepository{serviceClient: *client}
 }
 
-// CreateEvent creates an aztable entity in the specified table name, creating the table if it doesn't exist
-func (repo *EventRepository) CreateEvent(tableName string, event models.Event) error {
-
-	var invitee_ids []string
-	for _, user := range event.Invitees {
-		invitee_ids = append(invitee_ids, user.ID)
-	}
-	ids_string := strings.Join(invitee_ids, ",")
-
-	//https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/sdk/data/aztables
-	eventEntity := aztables.EDMEntity{
-		Entity: aztables.Entity{
-			PartitionKey: "Events",
-			RowKey:       event.ID,
-		},
-		Properties: map[string]any{
-			"EventName": event.EventName,
-			"Date":      event.Date,
-			"StartTime": event.StartTime,
-			"EndTime":   event.EndTime,
-			"Creator":   event.Creator.ID,
-			"Invitees":  ids_string,
-		},
-	}
-
-	//https://pkg.go.dev/encoding/json
-	serializedEntity, err := json.Marshal(eventEntity)
-	handlers.Handle(err)
-
-	_, err = repo.serviceClient.CreateTable(context.Background(), tableName, nil)
-
-	tableClient := repo.serviceClient.NewClient(tableName)
-
-	_, err = tableClient.AddEntity(context.Background(), serializedEntity, nil)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 // GetEvent retrieves and stores entity data in a Repo object
 func (repo *EventRepository) GetEvent(tableName string, id string) (models.Event, error) {
 
 	ctx := context.Background()
-	pKey := "Events"
 	tableClient := repo.serviceClient.NewClient(tableName)
 
-	resp, err := tableClient.GetEntity(ctx, pKey, id, nil)
+	resp, err := tableClient.GetEntity(ctx, PKey, id, nil)
 	if err != nil {
 		return models.Event{}, err
 	}
@@ -117,12 +78,94 @@ func (repo *EventRepository) GetEvent(tableName string, id string) (models.Event
 	return event, nil
 }
 
-func (repo *EventRepository) DeleteEvent(tableName string, id string) (bool, error) {
-	ctx := context.Background()
-	pKey := "Events"
+// CreateEvent creates an aztable entity in the specified table name, creating the table if it doesn't exist
+func (repo *EventRepository) CreateEvent(tableName string, event models.Event) error {
+
+	var invitee_ids []string
+	for _, user := range event.Invitees {
+		invitee_ids = append(invitee_ids, user.ID)
+	}
+	ids_string := strings.Join(invitee_ids, ",")
+
+	//https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/sdk/data/aztables
+	eventEntity := aztables.EDMEntity{
+		Entity: aztables.Entity{
+			PartitionKey: PartitionKey,
+			RowKey:       event.ID,
+		},
+		Properties: map[string]any{
+			"EventName": event.EventName,
+			"Date":      event.Date,
+			"StartTime": event.StartTime,
+			"EndTime":   event.EndTime,
+			"Creator":   event.Creator.ID,
+			"Invitees":  ids_string,
+		},
+	}
+
+	//https://pkg.go.dev/encoding/json
+	serializedEntity, err := json.Marshal(eventEntity)
+	handlers.Handle(err)
+
+	_, err = repo.serviceClient.CreateTable(context.Background(), tableName, nil)
+
 	tableClient := repo.serviceClient.NewClient(tableName)
 
-	_, err := tableClient.DeleteEntity(ctx, pKey, id, nil)
+	_, err = tableClient.AddEntity(context.Background(), serializedEntity, nil)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (repo *EventRepository) UpdateEvent(tableName string, newEventData models.Event) (models.Event, error) {
+	tableClient := repo.serviceClient.NewClient(tableName)
+	event, err := repo.GetEvent(tableName, newEventData.ID)
+	if err != nil {
+		return models.Event{}, fmt.Errorf("EVentRepo.UpdateEvent: Failed to retrieve event ID %s from %s: %w", newEventData.ID, tableName, err)
+	}
+	err = event.Update(newEventData)
+	if err != nil {
+		return models.Event{}, fmt.Errorf("EventRepo.UpdateEvent: Failed to updated event ID %s's fields: %w", event.ID, err)
+	}
+	var invitee_ids []string
+	for _, user := range event.Invitees {
+		invitee_ids = append(invitee_ids, user.ID)
+	}
+	ids_string := strings.Join(invitee_ids, ",")
+
+	eventEntity := aztables.EDMEntity{
+		Entity: aztables.Entity{
+			PartitionKey: PKey,
+			RowKey:       event.ID,
+		},
+		Properties: map[string]any{
+			"EventName": event.EventName,
+			"Date":      event.Date,
+			"StartTime": event.StartTime,
+			"EndTime":   event.EndTime,
+			"Creator":   event.Creator.ID,
+			"Invitees":  ids_string,
+		},
+	}
+
+	serEntity, err := json.Marshal(eventEntity)
+	if err != nil {
+		return models.Event{}, fmt.Errorf("EventRepo.UpdateUser: Failed to serialize event data: %w", err)
+	}
+	_, err = tableClient.UpdateEntity(context.Background(), serEntity, nil)
+	if err != nil {
+		return models.Event{}, fmt.Errorf("EventRepo.UpdateEntity: Failed to update entity in %s: %w", tableName, err)
+	}
+
+	return event, nil
+}
+
+func (repo *EventRepository) DeleteEvent(tableName string, id string) (bool, error) {
+	ctx := context.Background()
+	tableClient := repo.serviceClient.NewClient(tableName)
+
+	_, err := tableClient.DeleteEntity(ctx, PKey, id, nil)
 	if err != nil {
 		return false, err
 	}

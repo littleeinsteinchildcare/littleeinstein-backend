@@ -31,6 +31,71 @@ func NewUserRepo(cfg config.AzTableConfig) (services.UserRepo, error) {
 	return &UserRepository{serviceClient: *client}, nil
 }
 
+// GetUser retrieves and stores entity data in a User object
+func (repo *UserRepository) GetUser(tableName string, id string) (models.User, error) {
+
+	ctx := context.Background()
+	tableClient := repo.serviceClient.NewClient(tableName)
+
+	resp, err := tableClient.GetEntity(ctx, PartitionKey, id, nil)
+	if err != nil {
+		return models.User{}, fmt.Errorf("UserRepository.GetUser: Failed to retrieve entity from %s: %w", tableName, err)
+	}
+
+	var myEntity aztables.EDMEntity
+	err = json.Unmarshal(resp.Value, &myEntity)
+	if err != nil {
+		return models.User{}, fmt.Errorf("UserRepository.GetUser: Failed to deserialize entity: %w", err)
+	}
+
+	user := models.User{
+		ID:    myEntity.RowKey,
+		Name:  myEntity.Properties["Username"].(string),
+		Email: myEntity.Properties["Email"].(string),
+		Role:  myEntity.Properties["Role"].(string),
+	}
+
+	return user, nil
+}
+
+func (repo *UserRepository) GetAllUsers(tableName string) ([]models.User, error) {
+	ctx := context.Background()
+	tableClient := repo.serviceClient.NewClient(tableName)
+	filter := "PartitionKey eq 'Users'"
+	options := &aztables.ListEntitiesOptions{
+		Filter: &filter,
+	}
+	var users []models.User
+
+	pager := tableClient.NewListEntitiesPager(options)
+	pageCount := 0
+	for pager.More() {
+		response, err := pager.NextPage(ctx)
+		if err != nil {
+			return []models.User{}, fmt.Errorf("UserRepository.GetAllUsers: Failed to acquire next page: %w", err)
+		}
+		pageCount += 1
+
+		for _, userEntity := range response.Entities {
+			var myEntity aztables.EDMEntity
+			err = json.Unmarshal(userEntity, &myEntity)
+			if err != nil {
+				return []models.User{}, fmt.Errorf("UserRepositroy.GetAllUser: Failed to Unmarshal entity: %w", err)
+			}
+			user := models.User{
+				ID:    myEntity.RowKey,
+				Name:  myEntity.Properties["Username"].(string),
+				Email: myEntity.Properties["Email"].(string),
+				Role:  myEntity.Properties["Role"].(string),
+			}
+			users = append(users, user)
+		}
+
+	}
+	return users, nil
+
+}
+
 // CreateUser creates an aztable entity in the specified table name, creating the table if it doesn't exist
 func (repo *UserRepository) CreateUser(tableName string, user models.User) error {
 
@@ -71,7 +136,7 @@ func (repo *UserRepository) UpdateUser(tableName string, newUserData models.User
 	if err != nil {
 		return models.User{}, fmt.Errorf("UserRepository.UpdateUser: Failed to retrieve user ID %s from %s: %w", newUserData.ID, tableName, err)
 	}
-	err = user.UpdateFields(newUserData)
+	err = user.Update(newUserData)
 	if err != nil {
 		return models.User{}, fmt.Errorf("UserRepository.UpdateUser: Failed to update user ID %s's fields: %w", user.ID, err)
 	}
@@ -96,33 +161,6 @@ func (repo *UserRepository) UpdateUser(tableName string, newUserData models.User
 	if err != nil {
 		return models.User{}, fmt.Errorf("UserRepository.UpdateEntity: Failed to update entity in %s: %w", tableName, err)
 	}
-	return user, nil
-}
-
-// GetUser retrieves and stores entity data in a User object
-func (repo *UserRepository) GetUser(tableName string, id string) (models.User, error) {
-
-	ctx := context.Background()
-	tableClient := repo.serviceClient.NewClient(tableName)
-
-	resp, err := tableClient.GetEntity(ctx, PartitionKey, id, nil)
-	if err != nil {
-		return models.User{}, fmt.Errorf("UserRepository.GetUser: Failed to retrieve entity from %s: %w", tableName, err)
-	}
-
-	var myEntity aztables.EDMEntity
-	err = json.Unmarshal(resp.Value, &myEntity)
-	if err != nil {
-		return models.User{}, fmt.Errorf("UserRepository.GetUser: Failed to deserialize entity: %w", err)
-	}
-
-	user := models.User{
-		ID:    myEntity.RowKey,
-		Name:  myEntity.Properties["Username"].(string),
-		Email: myEntity.Properties["Email"].(string),
-		Role:  myEntity.Properties["Role"].(string),
-	}
-
 	return user, nil
 }
 

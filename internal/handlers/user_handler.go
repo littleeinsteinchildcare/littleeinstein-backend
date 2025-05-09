@@ -13,6 +13,7 @@ import (
 type UserService interface {
 	CreateUser(user models.User) error
 	GetUserByID(id string) (models.User, error)
+	GetAllUsers() ([]models.User, error)
 	DeleteUserByID(id string) error
 	UpdateUser(user models.User) (models.User, error)
 }
@@ -36,7 +37,7 @@ func (h *UserHandler) GetUser(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.userService.GetUserByID(id)
 	if err != nil {
-		writeJSONError(w, http.StatusNotFound, fmt.Sprintf("UserHandler.GetUser: Failed to find User with ID %s", id), err)
+		WriteJSONError(w, http.StatusNotFound, fmt.Sprintf("UserHandler.GetUser: Failed to find User with ID %s", id), err)
 		return
 	}
 
@@ -48,13 +49,32 @@ func (h *UserHandler) GetUser(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
+func (h *UserHandler) GetAllUsers(w http.ResponseWriter, r *http.Request) {
+	users, err := h.userService.GetAllUsers()
+	if err != nil {
+		WriteJSONError(w, http.StatusNotFound, fmt.Sprintf("UserHandler.GetUser: Failed to retrieve list of users"), err)
+	}
+
+	var responses []map[string]interface{}
+	// For idx, value
+	for _, user := range users {
+		// Create response with a list of user data
+		resp := BuildResponse(user)
+		responses = append(responses, resp)
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(responses)
+}
+
 // UpdateUser handles PUT requests for a specific user
 func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 
 	newData, err := io.ReadAll(r.Body)
 
 	if err != nil {
-		writeJSONError(w, http.StatusBadRequest, "UserHandler.UpdateUser: Failed to read request body", err)
+		WriteJSONError(w, http.StatusBadRequest, "UserHandler.UpdateUser: Failed to read request body", err)
 		return
 	}
 
@@ -62,13 +82,13 @@ func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 
 	var user models.User
 	if err := json.Unmarshal(newData, &user); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "UserHandler.UpdateUser: Attempt to unpack invalid JSON object", err)
+		WriteJSONError(w, http.StatusBadRequest, "UserHandler.UpdateUser: Attempt to unpack invalid JSON object", err)
 		return
 	}
 
 	user, err = h.userService.UpdateUser(user)
 	if err != nil {
-		writeJSONError(w, http.StatusNotFound, "UserHandler.UpdateUser: User does not exist", err)
+		WriteJSONError(w, http.StatusNotFound, "UserHandler.UpdateUser: User does not exist", err)
 		return
 	}
 	response := BuildResponse(user)
@@ -84,7 +104,7 @@ func (h *UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 
 	err := h.userService.DeleteUserByID(id)
 	if err != nil {
-		writeJSONError(w, http.StatusNotFound, fmt.Sprintf("UserHandler.DeleteUser: Failed to delete User with ID %s", id), err)
+		WriteJSONError(w, http.StatusNotFound, fmt.Sprintf("UserHandler.DeleteUser: Failed to delete User with ID %s", id), err)
 		return
 	}
 
@@ -97,7 +117,7 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 
 	userData, err := DecodeUserRequest(r)
 	if err != nil {
-		writeJSONError(w, http.StatusBadRequest, "UserHandler.DecodeUserRequest: Failed to decode JSON request", err)
+		WriteJSONError(w, http.StatusBadRequest, "UserHandler.DecodeUserRequest: Failed to decode JSON request", err)
 		return
 	}
 
@@ -111,7 +131,7 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	err = h.userService.CreateUser(user)
 
 	if err != nil {
-		writeJSONError(w, http.StatusBadRequest, "UserHandler.CreateUser: Failed to create User", err)
+		WriteJSONError(w, http.StatusBadRequest, "UserHandler.CreateUser: Failed to create User", err)
 		return
 	}
 
@@ -144,7 +164,7 @@ func BuildResponse(user models.User) map[string]interface{} {
 }
 
 // Error helper for additional frontend information
-func writeJSONError(w http.ResponseWriter, status int, msg string, err error) {
+func WriteJSONError(w http.ResponseWriter, status int, msg string, err error) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)

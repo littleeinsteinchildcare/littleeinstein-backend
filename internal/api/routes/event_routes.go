@@ -12,5 +12,6 @@ func RegisterEventRoutes(router *http.ServeMux, eventHandler *handlers.EventHand
 	router.HandleFunc("GET /events/{id}", eventHandler.GetEvent)
 	router.HandleFunc("DELETE /events/{id}", eventHandler.DeleteEvent)
 	router.HandleFunc("POST /events", eventHandler.CreateEvent)
+	router.HandleFunc("PUT /events/{id}", eventHandler.UpdateEvent)
 	// Add other routes as needed
 }

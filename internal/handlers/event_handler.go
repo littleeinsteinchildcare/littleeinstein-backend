@@ -3,7 +3,9 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"littleeinsteinchildcare/backend/internal/models"
+	"littleeinsteinchildcare/backend/internal/handlers"
 	"net/http"
 	"strings"
 )
@@ -13,6 +15,7 @@ type EventService interface {
 	CreateEvent(user models.Event) error
 	GetEventByID(id string) (models.Event, error)
 	DeleteEventByID(id string) (bool, error)
+	UpdateEvent(newData models.Event) (models.Event, error)
 }
 
 // EventHandler handles HTTP requests related to users
@@ -62,6 +65,68 @@ func (h *EventHandler) CreateEvent(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		fmt.Printf("Error: %v", err)
 	}
+
+	creator, err := h.userService.GetUserByID(eventData["creator"].(string))
+	// invitee_ids := eventData["invitees"].(string)
+	invitee_ids := strings.Split(eventData["invitees"].(string), ",")
+	var invitees_list []models.User
+
+	for _, id := range invitee_ids {
+		user, err := h.userService.GetUserByID(id)
+		Handle(err)
+		invitees_list = append(invitees_list, user)
+	}
+
+	event := models.Event{
+		ID:        eventData["id"].(string),
+		EventName: eventData["eventname"].(string),
+		Date:      eventData["date"].(string),
+		StartTime: eventData["starttime"].(string),
+		EndTime:   eventData["endtime"].(string),
+		Creator:   creator,
+		Invitees:  invitees_list,
+	}
+
+	err = h.eventService.CreateEvent(event)
+	if err != nil {
+		msg = fmt.Sprintf("Error Creating Event: %v\n", err)
+		success = false
+	}
+
+	response := map[string]interface{}{
+		"success":   success,
+		"message":   msg,
+		"id":        event.ID,
+		"eventname": event.EventName,
+		"date":      event.Date,
+		"starttime": event.StartTime,
+		"endtime":   event.EndTime,
+		"creator":   event.Creator,
+		"invitees":  event.Invitees,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(response)
+}
+
+func (h *EventHandler) UpdateEvent(w http.ResponseWriter, r *http.Request) {
+	success := true
+	msg := "Event Update Successfully"
+	eventData, err := DecodeEventRequest(r)
+	if err != nil {
+		fmt.Printf("Error: %v", err)
+	}
+
+	newData, err := io.ReadAll(r.Body)
+	if err != nil {
+		handlers.WriteJSONError(w, http.StatusBadRequest, "UserHandler.UpdateUser: Failed to read request body", err)
+	}
+
+	defer r.Body.Close()
+
+	var event models.Event
+	if err := 
 
 	creator, err := h.userService.GetUserByID(eventData["creator"].(string))
 	// invitee_ids := eventData["invitees"].(string)
