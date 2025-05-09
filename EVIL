@@ -1,0 +1,17 @@
+ROOT OF ALL EVIL: WE can't call a blob per client-side render
+                   How do we get photos for each client-side render besides through blob calls
+                   Can we update the front-end app's config and overwrite the store's photos
+                   Can we call some intermediary basically to store the photo that isn't DB EXPENSIVE CALL
+                   I am not gonna look into that
+
+[option 1]
+- Allow the user to upload pics and view them
+- Keep the cached slide show as it is
+
+ [option 2]
+ - Cache pictures of the website in the front-end app
+ - When a client requests the home slide show, it is just cached pics
+ - Once they log in, JS on the slide show requests the  backend api photos
+ - Slideshow now includes both cached pics and pics of users
+ - NOTE: by cached I mean 1. u store them on blob and then before client requests /home, the server slides app req's from blob the photos... then u don't need to redeploy the app
+                          2. u just cache them in the app, and then u get a lot more performance and less cost
