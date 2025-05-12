@@ -11,7 +11,8 @@ const EVENTSTABLE = "EventsTable"
 type EventRepo interface {
 	CreateEvent(tableName string, event models.Event) error
 	GetEvent(tableName string, id string) (models.Event, error)
-	DeleteEvent(tableName string, id string) (bool, error)
+	GetAllEvents(tableName string) ([]models.Event, error)
+	DeleteEvent(tableName string, id string) error
 	UpdateEvent(tableNAme string, model models.Event) (models.Event, error)
 }
 
@@ -37,6 +38,14 @@ func (s *EventService) GetEventByID(id string) (models.Event, error) {
 	return event, nil
 }
 
+func (s *EventService) GetAllEvents() ([]models.Event, error) {
+	events, err := s.repo.GetAllEvents(EVENTSTABLE)
+	if err != nil {
+		return []models.Event{}, err
+	}
+	return events, nil
+}
+
 // CreateEvent returns an error on a failed EventRepo call
 func (s *EventService) CreateEvent(event models.Event) error {
 	err := s.repo.CreateEvent(EVENTSTABLE, event)
@@ -46,10 +55,18 @@ func (s *EventService) CreateEvent(event models.Event) error {
 	return nil
 }
 
-func (s *EventService) DeleteEventByID(id string) (bool, error) {
-	success, err := s.repo.DeleteEvent(EVENTSTABLE, id)
+func (s *EventService) UpdateEvent(event models.Event) (models.Event, error) {
+	event, err := s.repo.UpdateEvent(EVENTSTABLE, event)
 	if err != nil {
-		return success, err
+		return event, err
 	}
-	return success, nil
+	return event, nil
+}
+
+func (s *EventService) DeleteEventByID(id string) error {
+	err := s.repo.DeleteEvent(EVENTSTABLE, id)
+	if err != nil {
+		return err
+	}
+	return nil
 }
