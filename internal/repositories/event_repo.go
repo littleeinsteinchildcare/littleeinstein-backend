@@ -29,16 +29,6 @@ func NewEventRepo(cfg config.AzTableConfig) services.EventRepo {
 	return &EventRepository{serviceClient: *client}
 }
 
-type eventEntity struct {
-	aztables.Entity
-	EventName  string `aztable:"EventName"`
-	Date       string `aztable:"Date"`
-	StartTime  string `aztable:"StartTime"`
-	EndTime    string `aztable:"EndTime"`
-	CreatorID  string `aztable:"Creator"`
-	InviteeIDs string `aztable:"Invitees"`
-}
-
 // GetEvent retrieves and stores entity data in a Repo object
 func (repo *EventRepository) GetEvent(tableName string, id string) (models.Event, error) {
 
@@ -88,7 +78,7 @@ func (repo *EventRepository) GetEvent(tableName string, id string) (models.Event
 	return event, nil
 }
 
-func (repo *EventRepository) GetAllEvents(tableName string) ([]eventEntity, error) {
+func (repo *EventRepository) GetAllEvents(tableName string) ([]models.EventEntity, error) {
 
 	//TODO -- Continue working with DTO Approach
 
@@ -97,7 +87,7 @@ func (repo *EventRepository) GetAllEvents(tableName string) ([]eventEntity, erro
 	options := &aztables.ListEntitiesOptions{
 		Filter: &filter,
 	}
-	var events []eventEntity
+	var events []models.EventEntity
 
 	pager := tableClient.NewListEntitiesPager(options)
 	pageCount := 0
@@ -109,7 +99,7 @@ func (repo *EventRepository) GetAllEvents(tableName string) ([]eventEntity, erro
 		pageCount += 1
 
 		for _, tableData := range response.Entities {
-			var entityData eventEntity
+			var entityData models.EventEntity
 			err = json.Unmarshal(tableData, &entityData)
 			if err != nil {
 				return nil, fmt.Errorf("EventRepo.GetAllEvents: Failed to unmarshal entity: %w", err)

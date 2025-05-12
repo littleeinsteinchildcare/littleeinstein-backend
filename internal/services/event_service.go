@@ -3,6 +3,7 @@ package services
 import (
 	"fmt"
 	"littleeinsteinchildcare/backend/internal/models"
+	"strings"
 )
 
 const EVENTSTABLE = "EventsTable"
@@ -11,19 +12,20 @@ const EVENTSTABLE = "EventsTable"
 type EventRepo interface {
 	CreateEvent(tableName string, event models.Event) error
 	GetEvent(tableName string, id string) (models.Event, error)
-	GetAllEvents(tableName string) ([]models.Event, error)
+	GetAllEvents(tableName string) ([]models.EventEntity, error)
 	DeleteEvent(tableName string, id string) error
 	UpdateEvent(tableNAme string, model models.Event) (models.Event, error)
 }
 
 // EventService contains and handles a specific EventRepository object
 type EventService struct {
-	repo EventRepo
+	repo        EventRepo
+	userService UserService
 }
 
 // NewEventService constructs and returns a EventService object
-func NewEventService(r EventRepo) *EventService {
-	return &EventService{repo: r}
+func NewEventService(r EventRepo, us UserService) *EventService {
+	return &EventService{repo: r, userService: us}
 }
 
 // GetEventByID handles calling the EventRepository GetEvent function and returns the result of a query by the EventRepository
@@ -39,10 +41,53 @@ func (s *EventService) GetEventByID(id string) (models.Event, error) {
 }
 
 func (s *EventService) GetAllEvents() ([]models.Event, error) {
-	events, err := s.repo.GetAllEvents(EVENTSTABLE)
+	eventRows, err := s.repo.GetAllEvents(EVENTSTABLE)
 	if err != nil {
 		return []models.Event{}, err
 	}
+
+	cachedUsers := make(map[string]models.User)
+	getUser := func(id string) (models.User, error) {
+		if u, ok := cachedUsers[id]; ok {
+			return u, nil
+		}
+		u, err := s.userService.GetUserByID(id)
+		if err != nil {
+			return models.User{}, err
+		}
+		cachedUsers[id] = u
+		return u, nil
+	}
+
+	events := make([]models.Event, 0, len(eventRows))
+
+	for _, r := range eventRows {
+		creator, err := getUser(r.CreatorID)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to get Creator %s: %w", r.CreatorID, err)
+		}
+
+		invitee_ids := strings.Split(r.InviteeIDs, ",")
+		invitees := make([]models.User, 0, len(invitee_ids))
+		for _, id := range invitee_ids {
+			u, err := getUser(id)
+			if err != nil {
+				return nil, fmt.Errorf("Failed to get invitee %s: %w", id, err)
+			}
+			invitees = append(invitees, u)
+		}
+
+		events = append(events, models.Event{
+			ID:        r.RowKey,
+			EventName: r.EventName,
+			Date:      r.Date,
+			StartTime: r.StartTime,
+			EndTime:   r.EndTime,
+			Creator:   creator,
+			Invitees:  invitees,
+		})
+	}
+
 	return events, nil
 }
 

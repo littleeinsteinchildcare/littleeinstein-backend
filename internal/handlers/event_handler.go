@@ -70,6 +70,10 @@ func (h *EventHandler) GetAllEvents(w http.ResponseWriter, r *http.Request) {
 		resp := buildEventResponse(event)
 		responses = append(responses, resp)
 	}
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(responses)
+
 }
 
 // CreateUser handles POST requests to create a new user
@@ -109,18 +113,6 @@ func (h *EventHandler) CreateEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := buildEventResponse(event)
-	// response := map[string]interface{}{
-	// 	"success":   success,
-	// 	"message":   msg,
-	// 	"id":        event.ID,
-	// 	"eventname": event.EventName,
-	// 	"date":      event.Date,
-	// 	"starttime": event.StartTime,
-	// 	"endtime":   event.EndTime,
-	// 	"creator":   event.Creator,
-	// 	"invitees":  event.Invitees,
-	// }
-
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(response)

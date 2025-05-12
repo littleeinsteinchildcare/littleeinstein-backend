@@ -52,7 +52,7 @@ func SetupRouter() *http.ServeMux {
 
 	// Create event service with repository dependency
 	// This service will handle business logic for event operations
-	eventService := services.NewEventService(eventRepo)
+	eventService := services.NewEventService(eventRepo, *userService)
 
 	// Initialize event handler with event service and user service dependencies
 	// The handler needs user service to validate user relationships with events
