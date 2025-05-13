@@ -44,21 +44,13 @@ func (h *EventHandler) GetEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := buildEventResponse(event)
-	// response := map[string]interface{}{
-	// 	"id":        id,
-	// 	"eventname": event.EventName,
-	// 	"date":      event.Date,
-	// 	"starttime": event.StartTime,
-	// 	"endtime":   event.EndTime,
-	// 	"creator":   event.Creator,
-	// 	"invitees":  event.Invitees,
-	// }
 
 	// Return JSON response
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
 }
 
+// Return all events with full User data for Creator and Invitees
 func (h *EventHandler) GetAllEvents(w http.ResponseWriter, r *http.Request) {
 	events, err := h.eventService.GetAllEvents()
 	if err != nil {
@@ -118,6 +110,7 @@ func (h *EventHandler) CreateEvent(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
+// Update Event for PUT requests, using partial matches to replace specified fields
 func (h *EventHandler) UpdateEvent(w http.ResponseWriter, r *http.Request) {
 
 	pathID := r.PathValue("id")
@@ -152,6 +145,7 @@ func (h *EventHandler) UpdateEvent(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
+// Delete an Event by Event ID
 func (h *EventHandler) DeleteEvent(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	err := h.eventService.DeleteEventByID(id)
@@ -163,6 +157,7 @@ func (h *EventHandler) DeleteEvent(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// Helper function to create Event to pass to service layer
 func (h *EventHandler) BuildPartialEvent(w http.ResponseWriter, eventData map[string]any) (models.Event, error) {
 
 	event := models.Event{ID: eventData["id"].(string)} // Above handling assures this will always exist in the eventData
@@ -180,6 +175,8 @@ func (h *EventHandler) BuildPartialEvent(w http.ResponseWriter, eventData map[st
 		event.EndTime = v
 	}
 
+	//! Questionable - Given time for a refactor, this could be cleaner with a better overall structure
+	// Grab IDs from Event Data and populate Event object with relevant User objects
 	var creator models.User
 	var err error
 	if eventData["creator"] != nil {
@@ -206,6 +203,7 @@ func (h *EventHandler) BuildPartialEvent(w http.ResponseWriter, eventData map[st
 	return event, nil
 }
 
+// Helper functiont to package JSON response
 func buildEventResponse(event models.Event) map[string]interface{} {
 	response := map[string]interface{}{
 		"id":        event.ID,

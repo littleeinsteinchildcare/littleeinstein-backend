@@ -52,6 +52,7 @@ func (s *UserService) CreateUser(user models.User) error {
 	return nil
 }
 
+// Update User and Process Errors from User Repo
 func (s *UserService) UpdateUser(user models.User) (models.User, error) {
 	user, err := s.repo.UpdateUser(USERSTABLE, user)
 	if err != nil {
@@ -60,6 +61,7 @@ func (s *UserService) UpdateUser(user models.User) (models.User, error) {
 	return user, nil
 }
 
+// Delete User from Users Table and all relevant Events and Invitations
 func (s *UserService) DeleteUserByID(id string) error {
 	err1 := s.repo.DeleteUser(USERSTABLE, id)
 	if err1 != nil {

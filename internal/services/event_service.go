@@ -37,8 +37,6 @@ func (s *EventService) GetEventByID(id string) (models.Event, error) {
 	if err != nil {
 		return models.Event{}, err
 	}
-
-	fmt.Printf("Event: %v", event)
 	return event, nil
 }
 
@@ -48,6 +46,7 @@ func (s *EventService) GetAllEvents() ([]models.Event, error) {
 		return []models.Event{}, err
 	}
 
+	// Avoid re-querying if a user has already been found in a previous creator/invitee list query
 	cachedUsers := make(map[string]models.User)
 	getUser := func(id string) (models.User, error) {
 		if u, ok := cachedUsers[id]; ok {
@@ -63,6 +62,7 @@ func (s *EventService) GetAllEvents() ([]models.Event, error) {
 
 	events := make([]models.Event, 0, len(eventRows))
 
+	// For each row returned by repo call, get full Event data (Creator as User and Invitees as User slice)
 	for _, r := range eventRows {
 		creator, err := getUser(r.CreatorID)
 		if err != nil {
@@ -79,6 +79,7 @@ func (s *EventService) GetAllEvents() ([]models.Event, error) {
 			invitees = append(invitees, u)
 		}
 
+		// Build list of all events in table
 		events = append(events, models.Event{
 			ID:        r.RowKey,
 			EventName: r.EventName,
@@ -102,6 +103,7 @@ func (s *EventService) CreateEvent(event models.Event) error {
 	return nil
 }
 
+// Update Event and handle errors from Event Repo
 func (s *EventService) UpdateEvent(event models.Event) (models.Event, error) {
 	event, err := s.repo.UpdateEvent(EVENTSTABLE, event)
 	if err != nil {
@@ -110,6 +112,7 @@ func (s *EventService) UpdateEvent(event models.Event) (models.Event, error) {
 	return event, nil
 }
 
+// Remove an Event and handle errors from Event Repo
 func (s *EventService) DeleteEventByID(id string) error {
 	err := s.repo.DeleteEvent(EVENTSTABLE, id)
 	if err != nil {
