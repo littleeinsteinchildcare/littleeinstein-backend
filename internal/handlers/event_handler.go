@@ -148,17 +148,6 @@ func (h *EventHandler) UpdateEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := buildEventResponse(updatedEvent)
-	// response := map[string]interface{}{
-	// 	"id":        updatedEvent.ID,
-	// 	"eventname": updatedEvent.EventName,
-	// 	"date":      updatedEvent.Date,
-	// 	"starttime": updatedEvent.StartTime,
-	// 	"endtime":   updatedEvent.EndTime,
-	// 	"creator":   updatedEvent.Creator,
-	// 	"invitees":  updatedEvent.Invitees,
-	// }
-
-	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(response)
 }

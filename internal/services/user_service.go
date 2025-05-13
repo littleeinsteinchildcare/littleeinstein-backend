@@ -17,12 +17,13 @@ type UserRepo interface {
 
 // UserService contains and handles a specific UserRepository object
 type UserService struct {
-	repo UserRepo
+	repo      UserRepo
+	eventRepo EventRepo
 }
 
 // NewUserService constructs and returns a UserService object
-func NewUserService(r UserRepo) *UserService {
-	return &UserService{repo: r}
+func NewUserService(r UserRepo, e EventRepo) *UserService {
+	return &UserService{repo: r, eventRepo: e}
 }
 
 // GetUserByID handles calling the UserRepository GetUser function and returns the result of a query by the UserRepository
@@ -60,9 +61,18 @@ func (s *UserService) UpdateUser(user models.User) (models.User, error) {
 }
 
 func (s *UserService) DeleteUserByID(id string) error {
-	err := s.repo.DeleteUser(USERSTABLE, id)
-	if err != nil {
-		return err
+	err1 := s.repo.DeleteUser(USERSTABLE, id)
+	if err1 != nil {
+		return err1
 	}
+	err2 := s.eventRepo.DeleteEventByUserID(EVENTSTABLE, id)
+	if err2 != nil {
+		return err2
+	}
+	err3 := s.eventRepo.RemoveInvitee(EVENTSTABLE, id)
+	if err3 != nil {
+		return err3
+	}
+
 	return nil
 }

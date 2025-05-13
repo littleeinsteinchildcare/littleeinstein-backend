@@ -205,3 +205,77 @@ func (repo *EventRepository) DeleteEvent(tableName string, id string) error {
 
 	return nil
 }
+
+func (repo *EventRepository) DeleteEventByUserID(tableName string, userID string) error {
+
+	tableClient := repo.serviceClient.NewClient(tableName)
+	filter := fmt.Sprintf("Creator eq '%s'", userID)
+	options := &aztables.ListEntitiesOptions{
+		Filter: &filter,
+	}
+
+	pager := tableClient.NewListEntitiesPager(options)
+	pageCount := 0
+	for pager.More() {
+		response, err := pager.NextPage(context.Background())
+		if err != nil {
+			return fmt.Errorf("EventRepo.DeleteEventByUserID: Failed to acquire next page: %w", err)
+		}
+		pageCount += 1
+
+		for _, tableData := range response.Entities {
+			var entityData models.EventEntity
+			err = json.Unmarshal(tableData, &entityData)
+			repo.DeleteEvent(services.EVENTSTABLE, entityData.CreatorID)
+			if err != nil {
+				return fmt.Errorf("EventRepo.DeleteEventByUserID: Failed to unmarshal entity: %w", err)
+			}
+		}
+	}
+	return nil
+}
+
+func (repo *EventRepository) RemoveInvitee(tableName string, userID string) error {
+
+	tableClient := repo.serviceClient.NewClient(tableName)
+
+	pager := tableClient.NewListEntitiesPager(nil)
+	pageCount := 0
+	for pager.More() {
+		response, err := pager.NextPage(context.Background())
+		if err != nil {
+			return fmt.Errorf("EventRepo.DeleteEventByUserID: Failed to acquire next page: %w", err)
+		}
+		pageCount += 1
+
+		for _, tableData := range response.Entities {
+			var entityData models.EventEntity
+			err = json.Unmarshal(tableData, &entityData)
+			if strings.Contains(entityData.InviteeIDs, userID) {
+				updatedInvitees := repo.stripInvitee(entityData.InviteeIDs, userID)
+				entityData.InviteeIDs = updatedInvitees
+
+				serEntity, err := json.Marshal(entityData)
+				if err != nil {
+					return fmt.Errorf("EventRepo.RemoveInvitee: Failed to serialize event data: %w", err)
+				}
+				_, err = tableClient.UpdateEntity(context.Background(), serEntity, nil)
+				if err != nil {
+					return fmt.Errorf("EventRepo.RemoveInvitee: Failed to update entity in %s: %w", tableName, err)
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (repo *EventRepository) stripInvitee(csv, toRemove string) string {
+	tokens := strings.Split(csv, ",")
+	filtered := make([]string, 0, len(tokens))
+	for _, p := range tokens {
+		if p != toRemove {
+			filtered = append(filtered, p)
+		}
+	}
+	return strings.Join(filtered, ",")
+}

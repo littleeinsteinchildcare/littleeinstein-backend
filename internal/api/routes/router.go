@@ -34,9 +34,14 @@ func SetupRouter() *http.ServeMux {
 		log.Fatalf("Router.SetupRouter: Failed to create user repository: %v", err)
 	}
 
+	// ---------- EVENT MODULE SETUP ----------
+	// Initialize event repository with the same Azure Table configuration
+	// Events are stored in a separate table but same storage account
+	eventRepo := repositories.NewEventRepo(*azTableCfg)
+
 	// Create user service with repository dependency
 	// This service will handle business logic for user operations
-	userService := services.NewUserService(userRepo)
+	userService := services.NewUserService(userRepo, eventRepo)
 
 	// Initialize user handler with service dependency
 	// This handler will process HTTP requests and use the service layer
@@ -44,11 +49,6 @@ func SetupRouter() *http.ServeMux {
 
 	// Register all user-related routes (create, get, update, delete)
 	RegisterUserRoutes(router, userHandler)
-
-	// ---------- EVENT MODULE SETUP ----------
-	// Initialize event repository with the same Azure Table configuration
-	// Events are stored in a separate table but same storage account
-	eventRepo := repositories.NewEventRepo(*azTableCfg)
 
 	// Create event service with repository dependency
 	// This service will handle business logic for event operations

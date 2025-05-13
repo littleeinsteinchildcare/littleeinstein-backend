@@ -14,6 +14,8 @@ type EventRepo interface {
 	GetEvent(tableName string, id string) (models.Event, error)
 	GetAllEvents(tableName string) ([]models.EventEntity, error)
 	DeleteEvent(tableName string, id string) error
+	DeleteEventByUserID(tableName string, userID string) error
+	RemoveInvitee(tableName string, userID string) error
 	UpdateEvent(tableNAme string, model models.Event) (models.Event, error)
 }
 
