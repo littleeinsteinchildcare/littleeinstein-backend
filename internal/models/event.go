@@ -1,5 +1,7 @@
 package models
 
+import "errors"
+
 type Event struct {
 	ID        string
 	EventName string
@@ -20,4 +22,27 @@ func NewEvent(id string, name string, date string, starttime string, endtime str
 		Creator:   creator,
 		Invitees:  invitees,
 	}
+}
+
+func (eventModel *Event) Update(newData Event) error {
+	if newData.ID != eventModel.ID {
+		return errors.New("Invalid ID when trying to update fields in Event")
+	}
+	if newData.EventName != "" {
+		eventModel.EventName = newData.EventName
+	}
+	if newData.Date != "" {
+		eventModel.Date = newData.EventName
+	}
+	if newData.StartTime != "" {
+		eventModel.StartTime = newData.StartTime
+	}
+	if newData.EndTime != "" {
+		eventModel.EndTime = newData.EndTime
+	}
+	if len(newData.Invitees) > 0 {
+		eventModel.Invitees = newData.Invitees
+	}
+	return nil
+
 }

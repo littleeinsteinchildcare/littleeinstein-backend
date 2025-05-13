@@ -18,7 +18,7 @@ func NewUser(id string, name string, email string, role string) *User {
 	}
 }
 
-func (userModel *User) UpdateFields(newUserData User) error {
+func (userModel *User) Update(newUserData User) error {
 
 	if newUserData.ID != userModel.ID {
 		return errors.New("Invalid ID when trying to update fields in User")

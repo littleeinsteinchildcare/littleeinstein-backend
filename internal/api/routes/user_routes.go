@@ -10,7 +10,8 @@ import (
 func RegisterUserRoutes(router *http.ServeMux, userHandler *handlers.UserHandler) {
 	// User routes using Go 1.22+ path pattern syntax
 	router.HandleFunc("GET /users/{id}", userHandler.GetUser)
-	router.HandleFunc("PUT /users", userHandler.UpdateUser)
+	router.HandleFunc("GET /users/all", userHandler.GetAllUsers)
+	router.HandleFunc("PUT /users/{id}", userHandler.UpdateUser)
 	router.HandleFunc("DELETE /users/{id}", userHandler.DeleteUser)
 	router.HandleFunc("POST /users", userHandler.CreateUser)
 }
