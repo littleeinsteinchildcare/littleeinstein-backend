@@ -241,7 +241,7 @@ This repository follows a clean, layered architecture for a Go REST API applicat
 │   ├── config/             (Application configuration processing)
 │   │   ├── aztables_config.go     (Azure Table Storage configuration)
 │   │   ├── server_config.go       (Server configuration settings)
-│   │   └── firebase_config.go     [NEW] (Firebase initialization and configuration)
+│   │   └── firebase_config.go     (Firebase initialization and configuration)
 │   ├── handlers/           (HTTP request handlers - processes HTTP requests)
 │   │   ├── event_handler.go       (Functions handling event-related requests)
 │   │   ├── generic_handler.go     (Common handler utilities)
@@ -255,7 +255,7 @@ This repository follows a clean, layered architecture for a Go REST API applicat
 │   │   └── firebase_repo.go       (Firebase Auth operations: email change, user deletion, group checks)
 │   └── services/           (Business logic layer)
 │       ├── event_service.go       (Event-related business rules and operations)
-│       └── user_service.go        (User-related business rules and operations)) 
+│       └── user_service.go        (User-related business rules and operations) 
 ├── pkg/                    (Reusable packages that could be used by external applications) [NOT IMPLEMENTED YET]
 ├── configs/                (Configuration files) [NOT IMPLEMENTED YET]
 │   ├── app.env                    (Environment-specific variables)
