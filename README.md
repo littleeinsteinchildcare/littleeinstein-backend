@@ -225,6 +225,7 @@ This repository follows a clean, layered architecture for a Go REST API applicat
 
 ## Project Structure
 ```
+Project Root/
 ├── cmd/                    (Command line applications)
 │   └── api/                (API server executable)
 │       └── main.go         (Application entry point - initializes and starts the server)
