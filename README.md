@@ -245,7 +245,7 @@ This repository follows a clean, layered architecture for a Go REST API applicat
 │   ├── handlers/           (HTTP request handlers - processes HTTP requests)
 │   │   ├── event_handler.go       (Functions handling event-related requests)
 │   │   ├── generic_handler.go     (Common handler utilities)
-│   │   └── user_handler.go        (User email change, deletion, group check endpoints) [UPDATED]
+│   │   └── user_handler.go        (Functions handling user-related requests) 
 │   ├── models/             (Data structures representing domain objects)
 │   │   ├── event.go               (Event entity definition with fields)
 │   │   └── user.go                (User entity definition with fields and validation)
@@ -255,7 +255,7 @@ This repository follows a clean, layered architecture for a Go REST API applicat
 │   │   └── firebase_repo.go       (Firebase Auth operations: email change, user deletion, group checks)
 │   └── services/           (Business logic layer)
 │       ├── event_service.go       (Event-related business rules and operations)
-│       └── user_service.go        (User business logic - coordinates Firebase and DB operations) [UPDATED]
+│       └── user_service.go        (User-related business rules and operations)) 
 ├── pkg/                    (Reusable packages that could be used by external applications) [NOT IMPLEMENTED YET]
 ├── configs/                (Configuration files) [NOT IMPLEMENTED YET]
 │   ├── app.env                    (Environment-specific variables)
