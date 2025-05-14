@@ -225,7 +225,6 @@ This repository follows a clean, layered architecture for a Go REST API applicat
 
 ## Project Structure
 ```
-Project Root/
 ├── cmd/                    (Command line applications)
 │   └── api/                (API server executable)
 │       └── main.go         (Application entry point - initializes and starts the server)
@@ -235,26 +234,28 @@ Project Root/
 │   │   │   ├── user_routes.go     (User endpoints: GET /users, POST /users, etc.)
 │   │   │   ├── event_routes.go    (Event endpoints: GET /events, POST /events, etc.)
 │   │   │   └── router.go          (Central router configuration - combines all routes)
-│   │   └── middleware/     (HTTP middleware functions) [NOT IMPLEMENTED YET]
+│   │   └── middleware/     (HTTP middleware functions) 
 │   │       ├── auth.go            (Authentication/Authorization checks)
 │   │       ├── cors.go            (Cross-Origin settings for frontend access)
-│   │       └── logging.go         (Request logging and tracing)
+│   │       └── logging.go         (Request logging and tracing)[NOT IMPLEMENTED YET]
 │   ├── config/             (Application configuration processing)
 │   │   ├── aztables_config.go     (Azure Table Storage configuration)
-│   │   └── server_config.go       (Server configuration settings)
+│   │   ├── server_config.go       (Server configuration settings)
+│   │   └── firebase_config.go     [NEW] (Firebase initialization and configuration)
 │   ├── handlers/           (HTTP request handlers - processes HTTP requests)
 │   │   ├── event_handler.go       (Functions handling event-related requests)
 │   │   ├── generic_handler.go     (Common handler utilities)
-│   │   └── user_handler.go        (Functions handling user-related requests)
+│   │   └── user_handler.go        (User email change, deletion, group check endpoints) [UPDATED]
 │   ├── models/             (Data structures representing domain objects)
 │   │   ├── event.go               (Event entity definition with fields)
 │   │   └── user.go                (User entity definition with fields and validation)
 │   ├── repositories/       (Database access layer)
 │   │   ├── event_repo.go          (Event CRUD operations in the database)
-│   │   └── user_repo.go           (User CRUD operations in the database)
+│   │   ├── user_repo.go           (User CRUD operations in the database)
+│   │   └── firebase_repo.go       (Firebase Auth operations: email change, user deletion, group checks)
 │   └── services/           (Business logic layer)
 │       ├── event_service.go       (Event-related business rules and operations)
-│       └── user_service.go        (User-related business rules and operations)
+│       └── user_service.go        (User business logic - coordinates Firebase and DB operations) [UPDATED]
 ├── pkg/                    (Reusable packages that could be used by external applications) [NOT IMPLEMENTED YET]
 ├── configs/                (Configuration files) [NOT IMPLEMENTED YET]
 │   ├── app.env                    (Environment-specific variables)
