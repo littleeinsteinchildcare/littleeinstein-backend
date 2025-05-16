@@ -88,16 +88,6 @@ func SetupRouter() *http.ServeMux {
 // This is a separate function so it can be easily removed later
 func registerAzureB2CEndpoint(router *http.ServeMux) {
 	router.HandleFunc("/auth/azure-b2c/{id}", func(w http.ResponseWriter, r *http.Request) {
-		// 1. ALWAYS set CORS headers first for ALL requests
-		w.Header().Set("Access-Control-Allow-Origin", "*") // For testing, can be more specific later
-		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-
-		// 2. Handle OPTIONS preflight request BEFORE checking other methods
-		if r.Method == http.MethodOptions {
-			w.WriteHeader(http.StatusOK)
-			return
-		}
 
 		// 3. Now check for the actual GET method (frontend is using GET with the callSecureApi function)
 		if r.Method != http.MethodGet {
