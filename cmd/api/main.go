@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 
+	"littleeinsteinchildcare/backend/internal/api/middleware"
 	"littleeinsteinchildcare/backend/internal/api/routes"
 	"littleeinsteinchildcare/backend/internal/config"
 
@@ -24,10 +25,14 @@ func main() {
 	// Set up router with all routes
 	router := routes.SetupRouter()
 
+	// Wrap with CORS
+	corsHandler := middleware.CorsMiddleware(router)
+
 	// Server configuration with security timeouts
 	server := http.Server{
 		Addr:    fmt.Sprintf(":%d", cfg.Port),
-		Handler: router,
+		Handler: corsHandler, // CORS (Cross-Origin Resource Sharing) is a browser security feature that blocks requests between different origins (domain/port/protocol).
+		// corsHandler wraps our router to add headers that allow our frontend (localhost:3000) to communicate with this backend API
 		// Add timeouts later as needed
 	}
 

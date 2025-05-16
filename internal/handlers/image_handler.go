@@ -12,8 +12,6 @@ import (
 
 	"littleeinsteinchildcare/backend/internal/models"
 	"littleeinsteinchildcare/backend/internal/services"
-
-	"github.com/gorilla/mux"
 )
 
 const (
@@ -138,9 +136,12 @@ func (h *ImageHandler) UploadImage(w http.ResponseWriter, r *http.Request) {
 
 func (c *ImageHandler) GetImage(w http.ResponseWriter, r *http.Request) {
 	// Get the image ID and file name from the URL parameters
-	vars := mux.Vars(r)
-	imageID := vars["id"]
-	fileName := vars["fileName"]
+	// vars := mux.Vars(r)
+	// imageID := vars["id"]
+	// fileName := vars["fileName"]
+
+	imageID := r.PathValue("id")
+	fileName := r.PathValue("fileName")
 
 	if imageID == "" || fileName == "" {
 		http.Error(w, "Image ID and file name are required", http.StatusBadRequest)
@@ -162,14 +163,17 @@ func (c *ImageHandler) GetImage(w http.ResponseWriter, r *http.Request) {
 	w.Write(data)
 }
 
-func (c *ImageHandler) DeleteImage(w http.ResponseWriter, r *http.Request) {
+func (h *ImageHandler) DeleteImage(w http.ResponseWriter, r *http.Request) {
 	// Set appropriate headers
 	w.Header().Set("Content-Type", "application/json")
 
+	fmt.Printf("BEFORE CALLING DELETE IMAGE\n\n")
 	// Get the image ID and file name from the URL parameters
-	vars := mux.Vars(r)
-	imageID := vars["id"]
-	fileName := vars["fileName"]
+	// vars := mux.Vars(r)
+	// imageID := vars["id"]
+	// fileName := vars["fileName"]
+	imageID := r.PathValue("id")
+	fileName := r.PathValue("fileName")
 
 	if imageID == "" || fileName == "" {
 		http.Error(w, "Image ID and file name are required", http.StatusBadRequest)
@@ -178,12 +182,13 @@ func (c *ImageHandler) DeleteImage(w http.ResponseWriter, r *http.Request) {
 
 	// Delete the image from Azure Blob Storage
 	ctx := context.Background()
-	err := c.blobService.DeleteImage(ctx, imageID, fileName)
+	err := h.blobService.DeleteImage(ctx, imageID, fileName)
 	if err != nil {
 		http.Error(w, "Failed to delete image", http.StatusNotFound)
 		return
 	}
 
+	fmt.Printf("AFTER CALLING DELETE IMAGE\n\n")
 	// Return success response
 	response := struct {
 		Success bool   `json:"success"`
@@ -204,12 +209,12 @@ func (c *ImageHandler) DeleteImage(w http.ResponseWriter, r *http.Request) {
 	w.Write(jsonResponse)
 }
 
-func (c *ImageHandler) GetStatistics(w http.ResponseWriter, r *http.Request) {
+func (h *ImageHandler) GetStatistics(w http.ResponseWriter, r *http.Request) {
 	// Set appropriate headers
 	w.Header().Set("Content-Type", "application/json")
 
 	// Get statistics
-	stats := c.statisticsService.GetStatistics()
+	stats := h.statisticsService.GetStatistics()
 
 	fmt.Printf("GETTING STATS: %v", stats)
 
@@ -223,7 +228,7 @@ func (c *ImageHandler) GetStatistics(w http.ResponseWriter, r *http.Request) {
 		Success:    true,
 		Message:    "Statistics retrieved successfully",
 		Statistics: stats,
-		SizeLimit:  c.statisticsService.GetSizeLimit(),
+		SizeLimit:  h.statisticsService.GetSizeLimit(),
 	}
 
 	// Marshal the response to JSON

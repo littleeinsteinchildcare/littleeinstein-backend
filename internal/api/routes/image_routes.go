@@ -20,5 +20,5 @@ func RegisterBlobRoutes(r *http.ServeMux, imageHandler *handlers.ImageHandler) {
 
 	// Statistics route
 	// r.HandleFunc("/api/images/statistics", imageController.GetStatistics).Methods("GET")
-	r.HandleFunc("GET /images/statstics", imageHandler.GetStatistics)
+	r.HandleFunc("GET /images/statistics", imageHandler.GetStatistics)
 }
