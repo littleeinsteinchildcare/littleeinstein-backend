@@ -95,7 +95,7 @@ function test_update(){
 }
 
 function test_delete(){
-	echo -e "${Y}Running DELETE failure test...${NC}"
+	echo -e "${Y}Running DELETE test...${NC}"
 
 
 	for (( i = 1; i <6; i++)); do

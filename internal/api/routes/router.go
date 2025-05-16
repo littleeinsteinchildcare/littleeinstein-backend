@@ -2,6 +2,7 @@ package routes
 
 import (
 	"encoding/json"
+	"fmt"
 	"littleeinsteinchildcare/backend/internal/config"
 	"littleeinsteinchildcare/backend/internal/handlers"
 	"littleeinsteinchildcare/backend/internal/repositories"
@@ -63,6 +64,16 @@ func SetupRouter() *http.ServeMux {
 
 	// Register all event-related routes (create, get, update, delete)
 	RegisterEventRoutes(router, eventHandler)
+
+	blobConfig, err := config.LoadBlobConfig()
+	blobService, err := services.NewBlobStorageService(blobConfig.AzureAccountName, blobConfig.AzureAccountKey, blobConfig.AzureContainerName)
+	if err != nil {
+		fmt.Printf("ERROR CREATING BLOB SERVICE: %v", err)
+	}
+	// statService := services.StatisticsService{}
+	statService := services.NewStatisticsService(handlers.MaxUploadSize)
+	imageHandler := handlers.NewImageController(blobService, &statService)
+	RegisterBlobRoutes(router, imageHandler)
 
 	// Register Azure B2C auth endpoint
 	registerAzureB2CEndpoint(router)
