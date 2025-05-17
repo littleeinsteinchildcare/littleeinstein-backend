@@ -60,3 +60,5 @@ config.json
 
 # Azurite emulator files
 __azurite_*
+AzuriteConfig
+
