@@ -64,7 +64,17 @@ func SetupRouter() *http.ServeMux {
 	// Register all event-related routes (create, get, update, delete)
 	RegisterEventRoutes(router, eventHandler)
 
-	// Register Azure B2C auth endpoint
+	// ---------- BANNER MODULE SETUP ----------
+	// Create banner service (no repository needed)
+	bannerService := services.NewBannerService()
+
+	// Initialize banner handler with service
+	bannerHandler := handlers.NewBannerHandler(bannerService)
+
+	// Register all banner-related routes
+	RegisterBannerRoutes(router, bannerHandler)
+
+	// ----------Register Azure B2C Auth Endpoint ----------
 	registerAzureB2CEndpoint(router)
 
 	// ---------- API INFORMATION ENDPOINT ----------
