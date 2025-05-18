@@ -17,8 +17,8 @@ type StatisticsService struct {
 }
 
 // NewStatisticsService creates a new StatisticsService
-func NewStatisticsService(sizeLimit int64) StatisticsService {
-	return StatisticsService{
+func NewStatisticsService(sizeLimit int64) *StatisticsService {
+	return &StatisticsService{
 		totalImages:   0,
 		totalSize:     0,
 		largestImage:  0,

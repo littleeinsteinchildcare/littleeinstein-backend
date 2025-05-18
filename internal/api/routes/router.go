@@ -43,9 +43,14 @@ func SetupRouter() *http.ServeMux {
 		log.Fatalf("Router.SetupRouter: Failed to create event repository: %v", err)
 	}
 
+	blobConfig, err := config.LoadBlobConfig()
+	blobService, err := services.NewBlobStorageService(blobConfig.AzureAccountName, blobConfig.AzureAccountKey, blobConfig.AzureContainerName)
+	if err != nil {
+		fmt.Printf("ERROR CREATING BLOB SERVICE: %v", err)
+	}
 	// Create user service with repository dependency
 	// This service will handle business logic for user operations
-	userService := services.NewUserService(userRepo, eventRepo)
+	userService := services.NewUserService(userRepo, eventRepo, *blobService)
 
 	// Initialize user handler with service dependency
 	// This handler will process HTTP requests and use the service layer
@@ -65,14 +70,9 @@ func SetupRouter() *http.ServeMux {
 	// Register all event-related routes (create, get, update, delete)
 	RegisterEventRoutes(router, eventHandler)
 
-	blobConfig, err := config.LoadBlobConfig()
-	blobService, err := services.NewBlobStorageService(blobConfig.AzureAccountName, blobConfig.AzureAccountKey, blobConfig.AzureContainerName)
-	if err != nil {
-		fmt.Printf("ERROR CREATING BLOB SERVICE: %v", err)
-	}
 	// statService := services.StatisticsService{}
 	statService := services.NewStatisticsService(handlers.MaxUploadSize)
-	imageHandler := handlers.NewImageController(blobService, &statService)
+	imageHandler := handlers.NewImageController(blobService, statService)
 	RegisterBlobRoutes(router, imageHandler)
 
 	// Register Azure B2C auth endpoint

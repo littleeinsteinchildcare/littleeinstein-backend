@@ -9,7 +9,7 @@ func CorsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Set which origins (domains) are allowed to make requests to this server
 		// In this case, only http://localhost:3000 can access our API
-		// TODO- CHANGE AWAY FROM WILDSTAR
+		// TODO- CHANGE AWAY FROM WILDCARD
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 
 		// Specify which HTTP methods the client is allowed to use

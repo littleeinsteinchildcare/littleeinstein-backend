@@ -12,7 +12,6 @@ import (
 	"littleeinsteinchildcare/backend/internal/models"
 
 	"github.com/Azure/azure-storage-blob-go/azblob"
-	"github.com/google/uuid"
 )
 
 type BlobStorageService struct {
@@ -47,8 +46,6 @@ func NewBlobStorageService(accountName, accountKey, containerName string) (*Blob
 	// pipeline to make requests.
 	containerURL := azblob.NewContainerURL(*URL, pipeline)
 
-	fmt.Printf("CONTAINER URL: %v", containerURL)
-
 	// Create the container if it doesn't exist
 	ctx := context.Background()
 	_, err = containerURL.Create(ctx, azblob.Metadata{}, azblob.PublicAccessNone)
@@ -69,18 +66,14 @@ func NewBlobStorageService(accountName, accountKey, containerName string) (*Blob
 	}, nil
 }
 
-func (s *BlobStorageService) UploadImage(ctx context.Context, fileName string, contentType string, data []byte) (*models.Image, error) {
-
-	fmt.Printf("IN BLOB STORAGE SERVICE\n\n")
+func (s *BlobStorageService) UploadImage(ctx context.Context, fileName string, contentType string, data []byte, userID string) (*models.Image, error) {
 
 	// Generate a unique ID for the image
-	imageID := uuid.New().String()
+	// imageID := uuid.New().String()
 
 	// Create a unique blob name
-	blobName := fmt.Sprintf("%s/%s", imageID, fileName)
+	blobName := fmt.Sprintf("%s/%s", userID, fileName)
 
-	fmt.Printf("CONTAINER URL IN UPLOAD: %v", s.containerURL)
-	fmt.Printf("BLOB NAME IN UPLOAD: %v", s.containerURL)
 	// Get a reference to a blob
 	blobURL := s.containerURL.NewBlockBlobURL(blobName)
 
@@ -92,7 +85,7 @@ func (s *BlobStorageService) UploadImage(ctx context.Context, fileName string, c
 			ContentType: contentType,
 		},
 		Metadata: azblob.Metadata{
-			"id": imageID,
+			"id": userID,
 		},
 	}
 
@@ -101,7 +94,6 @@ func (s *BlobStorageService) UploadImage(ctx context.Context, fileName string, c
 		return nil, err
 	}
 
-	fmt.Printf("HERE 2\n\n")
 	// Get the URL for the uploaded blob
 	blobURLString := blobURL.URL()
 
@@ -109,7 +101,7 @@ func (s *BlobStorageService) UploadImage(ctx context.Context, fileName string, c
 
 	// Create and return image info
 	image := &models.Image{
-		ID:          imageID,
+		ID:          userID,
 		Name:        fileName,
 		URL:         blobURLString.String(),
 		ContentType: contentType,
@@ -117,14 +109,12 @@ func (s *BlobStorageService) UploadImage(ctx context.Context, fileName string, c
 		UploadedAt:  now,
 	}
 
-	fmt.Printf("HERE 3\n\n")
-
 	return image, nil
 }
 
-func (s *BlobStorageService) GetImage(ctx context.Context, imageID, fileName string) ([]byte, string, error) {
+func (s *BlobStorageService) GetImage(ctx context.Context, userID, fileName string) ([]byte, string, error) {
 	// Construct the blob name from the image ID and file name
-	blobName := fmt.Sprintf("%s/%s", imageID, fileName)
+	blobName := fmt.Sprintf("%s/%s", userID, fileName)
 
 	// Get a reference to the blob
 	blobURL := s.containerURL.NewBlockBlobURL(blobName)
@@ -152,13 +142,12 @@ func (s *BlobStorageService) GetImage(ctx context.Context, imageID, fileName str
 	return buffer.Bytes(), contentType, nil
 }
 
-func (s *BlobStorageService) DeleteImage(ctx context.Context, imageID, fileName string) error {
+func (s *BlobStorageService) DeleteImage(ctx context.Context, userID, fileName string) error {
 	// Construct the blob name from the image ID and file name
-	blobName := fmt.Sprintf("%s/%s", imageID, fileName)
+	blobName := fmt.Sprintf("%s/%s", userID, fileName)
 
 	// Get a reference to the blob
 	blobURL := s.containerURL.NewBlockBlobURL(blobName)
-
 	// Delete the blob
 	_, err := blobURL.Delete(ctx, azblob.DeleteSnapshotsOptionNone, azblob.BlobAccessConditions{})
 	return err

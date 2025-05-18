@@ -54,7 +54,7 @@ func (repo *UserRepository) GetUser(tableName string, id string) (models.User, e
 		Email: myEntity.Properties["Email"].(string),
 		Role:  myEntity.Properties["Role"].(string),
 	}
-
+	// TODO - STOPPED HERE FOR WORKING WITH IMAGE IDS
 	return user, nil
 }
 
@@ -99,6 +99,13 @@ func (repo *UserRepository) GetAllUsers(tableName string) ([]models.User, error)
 // CreateUser creates an aztable entity in the specified table name, creating the table if it doesn't exist
 func (repo *UserRepository) CreateUser(tableName string, user models.User) error {
 
+	var imagesStr string
+	if bytes, err := json.Marshal(user.ImageIDs); err == nil {
+		imagesStr = string(bytes)
+	} else {
+		return err
+	}
+
 	//https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/sdk/data/aztables
 	userEntity := aztables.EDMEntity{
 		Entity: aztables.Entity{
@@ -109,6 +116,7 @@ func (repo *UserRepository) CreateUser(tableName string, user models.User) error
 			"Username": user.Name,
 			"Email":    user.Email,
 			"Role":     user.Role,
+			"ImageIDs": imagesStr,
 		},
 	}
 
@@ -141,6 +149,12 @@ func (repo *UserRepository) UpdateUser(tableName string, newUserData models.User
 		return models.User{}, fmt.Errorf("UserRepository.UpdateUser: Failed to update user ID %s's fields: %w", user.ID, err)
 	}
 
+	var imagesStr string
+	if bytes, err := json.Marshal(user.ImageIDs); err == nil {
+		imagesStr = string(bytes)
+	} else {
+		return models.User{}, err
+	}
 	userEntity := aztables.EDMEntity{
 		Entity: aztables.Entity{
 			PartitionKey: PartitionKey,
@@ -150,6 +164,7 @@ func (repo *UserRepository) UpdateUser(tableName string, newUserData models.User
 			"Username": user.Name,
 			"Email":    user.Email,
 			"Role":     user.Role,
+			"ImageIDs": imagesStr,
 		},
 	}
 

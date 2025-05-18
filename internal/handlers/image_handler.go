@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"io"
 	"net/http"
 	"path/filepath"
@@ -12,6 +12,7 @@ import (
 
 	"littleeinsteinchildcare/backend/internal/models"
 	"littleeinsteinchildcare/backend/internal/services"
+	"littleeinsteinchildcare/backend/internal/utils"
 )
 
 const (
@@ -22,7 +23,7 @@ const (
 // BlobStorageInterface defines the interface for storage services
 // This allows us to swap implementations (Azure or local) for testing
 type BlobStorageInterface interface {
-	UploadImage(ctx context.Context, fileName string, contentType string, data []byte) (*models.Image, error)
+	UploadImage(ctx context.Context, fileName string, contentType string, data []byte, userID string) (*models.Image, error)
 	GetImage(ctx context.Context, imageID, fileName string) ([]byte, string, error)
 	DeleteImage(ctx context.Context, imageID, fileName string) error
 }
@@ -46,6 +47,15 @@ func NewImageController(blobService BlobStorageInterface, statisticsService *ser
 	}
 }
 
+func getUserIDFromAuth(r *http.Request) (string, error) {
+	//TODO! - Implement real auth grab (remove r from arguments, pass in context
+	userID := r.Header.Get("X-User-ID")
+	if userID == "" {
+		return "", errors.New("Request Header is missing required field: X-User-ID")
+	}
+	return userID, nil
+}
+
 func (h *ImageHandler) UploadImage(w http.ResponseWriter, r *http.Request) {
 	// Set appropriate headers
 	w.Header().Set("Content-Type", "application/json")
@@ -54,6 +64,13 @@ func (h *ImageHandler) UploadImage(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseMultipartForm(MaxUploadSize)
 	if err != nil {
 		http.Error(w, "Unable to parse form", http.StatusBadRequest)
+		return
+	}
+
+	// Get the userID from the request
+	userID, err := getUserIDFromAuth(r)
+	if err != nil {
+		utils.WriteJSONError(w, http.StatusBadRequest, "Failed to retrieve userID", err)
 		return
 	}
 
@@ -102,17 +119,14 @@ func (h *ImageHandler) UploadImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Printf("BEFORE CALLING UPLOAD IMAGE\n")
-
 	// Upload to Azure Blob Storage
 	ctx := context.Background()
-	image, err := h.blobService.UploadImage(ctx, fileName, contentType, buffer.Bytes())
+	image, err := h.blobService.UploadImage(ctx, fileName, contentType, buffer.Bytes(), userID)
 	if err != nil {
 		http.Error(w, "Failed to upload image", http.StatusInternalServerError)
 		return
 	}
 
-	fmt.Printf("AFTER CALLING\n")
 	// Track the image in statistics
 	h.statisticsService.TrackUploadedImage(header.Size)
 
@@ -140,17 +154,25 @@ func (c *ImageHandler) GetImage(w http.ResponseWriter, r *http.Request) {
 	// imageID := vars["id"]
 	// fileName := vars["fileName"]
 
-	imageID := r.PathValue("id")
+	// imageID := r.PathValue("id")
+
+	// Get the userID from the request
+	userID, err := getUserIDFromAuth(r)
+	if err != nil {
+		utils.WriteJSONError(w, http.StatusBadRequest, "Failed to retrieve userID", err)
+		return
+	}
+
 	fileName := r.PathValue("fileName")
 
-	if imageID == "" || fileName == "" {
+	if userID == "" || fileName == "" {
 		http.Error(w, "Image ID and file name are required", http.StatusBadRequest)
 		return
 	}
 
 	// Get the image from Azure Blob Storage
 	ctx := context.Background()
-	data, contentType, err := c.blobService.GetImage(ctx, imageID, fileName)
+	data, contentType, err := c.blobService.GetImage(ctx, userID, fileName)
 	if err != nil {
 		http.Error(w, "Failed to get image", http.StatusNotFound)
 		return
@@ -167,28 +189,27 @@ func (h *ImageHandler) DeleteImage(w http.ResponseWriter, r *http.Request) {
 	// Set appropriate headers
 	w.Header().Set("Content-Type", "application/json")
 
-	fmt.Printf("BEFORE CALLING DELETE IMAGE\n\n")
-	// Get the image ID and file name from the URL parameters
-	// vars := mux.Vars(r)
-	// imageID := vars["id"]
-	// fileName := vars["fileName"]
-	imageID := r.PathValue("id")
+	userID, err := getUserIDFromAuth(r)
+	if err != nil {
+		utils.WriteJSONError(w, http.StatusBadRequest, "Failed to retrieve userID", err)
+		return
+	}
+
 	fileName := r.PathValue("fileName")
 
-	if imageID == "" || fileName == "" {
+	if userID == "" || fileName == "" {
 		http.Error(w, "Image ID and file name are required", http.StatusBadRequest)
 		return
 	}
 
 	// Delete the image from Azure Blob Storage
 	ctx := context.Background()
-	err := h.blobService.DeleteImage(ctx, imageID, fileName)
-	if err != nil {
+	err2 := h.blobService.DeleteImage(ctx, userID, fileName)
+	if err2 != nil {
 		http.Error(w, "Failed to delete image", http.StatusNotFound)
 		return
 	}
 
-	fmt.Printf("AFTER CALLING DELETE IMAGE\n\n")
 	// Return success response
 	response := struct {
 		Success bool   `json:"success"`
@@ -215,8 +236,6 @@ func (h *ImageHandler) GetStatistics(w http.ResponseWriter, r *http.Request) {
 
 	// Get statistics
 	stats := h.statisticsService.GetStatistics()
-
-	fmt.Printf("GETTING STATS: %v", stats)
 
 	// Return success response
 	response := struct {
