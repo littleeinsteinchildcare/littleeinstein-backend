@@ -20,9 +20,7 @@ const (
 	MaxUploadSize = 10 << 20
 )
 
-// BlobStorageInterface defines the interface for storage services
-// This allows us to swap implementations (Azure or local) for testing
-type BlobStorageInterface interface {
+type BlobService interface {
 	UploadImage(ctx context.Context, fileName string, contentType string, data []byte, userID string) (*models.Image, error)
 	GetImage(ctx context.Context, imageID, fileName string) ([]byte, string, error)
 	DeleteImage(ctx context.Context, imageID, fileName string) error
@@ -36,11 +34,11 @@ type StatisticsService interface {
 }
 
 type ImageHandler struct {
-	blobService       BlobStorageInterface
+	blobService       BlobService
 	statisticsService *services.StatisticsService
 }
 
-func NewImageController(blobService BlobStorageInterface, statisticsService *services.StatisticsService) *ImageHandler {
+func NewImageController(blobService BlobService, statisticsService *services.StatisticsService) *ImageHandler {
 	return &ImageHandler{
 		blobService:       blobService,
 		statisticsService: statisticsService,
@@ -149,12 +147,6 @@ func (h *ImageHandler) UploadImage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *ImageHandler) GetImage(w http.ResponseWriter, r *http.Request) {
-	// Get the image ID and file name from the URL parameters
-	// vars := mux.Vars(r)
-	// imageID := vars["id"]
-	// fileName := vars["fileName"]
-
-	// imageID := r.PathValue("id")
 
 	// Get the userID from the request
 	userID, err := getUserIDFromAuth(r)

@@ -1,6 +1,8 @@
 package models
 
-import "errors"
+import (
+	"errors"
+)
 
 type User struct {
 	ID       string
@@ -35,7 +37,11 @@ func (userModel *User) Update(newUserData User) error {
 		userModel.Role = newUserData.Role
 	}
 	if len(newUserData.ImageIDs) > 0 {
-		userModel.ImageIDs = newUserData.ImageIDs
+		if len(newUserData.ImageIDs) >= 3 {
+			return errors.New("User Max number of Images exceeded")
+		} else {
+			userModel.ImageIDs = newUserData.ImageIDs
+		}
 	}
 	return nil
 

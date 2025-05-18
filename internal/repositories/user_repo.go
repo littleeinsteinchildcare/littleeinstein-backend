@@ -54,7 +54,16 @@ func (repo *UserRepository) GetUser(tableName string, id string) (models.User, e
 		Email: myEntity.Properties["Email"].(string),
 		Role:  myEntity.Properties["Role"].(string),
 	}
-	// TODO - STOPPED HERE FOR WORKING WITH IMAGE IDS
+
+	if entityImageIDs, ok := myEntity.Properties["ImageIDs"]; ok {
+		if imageIDsString, ok := entityImageIDs.(string); ok {
+			var imageIDs []string
+			if err := json.Unmarshal([]byte(imageIDsString), &imageIDs); err != nil {
+				return models.User{}, fmt.Errorf("UserRepository.GetUser: Failed to parse Image IDs")
+			}
+			user.ImageIDs = imageIDs
+		}
+	}
 	return user, nil
 }
 
@@ -87,6 +96,7 @@ func (repo *UserRepository) GetAllUsers(tableName string) ([]models.User, error)
 				Name:  myEntity.Properties["Username"].(string),
 				Email: myEntity.Properties["Email"].(string),
 				Role:  myEntity.Properties["Role"].(string),
+				//TODO - Handle Image IDs
 			}
 			users = append(users, user)
 		}
@@ -136,6 +146,21 @@ func (repo *UserRepository) CreateUser(tableName string, user models.User) error
 	return nil
 }
 
+func updateImageIDs(newUserData models.User, user models.User) []string {
+	imageSet := make(map[string]struct{})
+	for _, id := range user.ImageIDs {
+		imageSet[id] = struct{}{}
+	}
+	for _, id := range newUserData.ImageIDs {
+		imageSet[id] = struct{}{}
+	}
+	uniqueList := make([]string, 0, len(imageSet))
+	for id := range imageSet {
+		uniqueList = append(uniqueList, id)
+	}
+	return uniqueList
+}
+
 func (repo *UserRepository) UpdateUser(tableName string, newUserData models.User) (models.User, error) {
 	ctx := context.Background()
 	tableClient := repo.serviceClient.NewClient(tableName)
@@ -144,17 +169,26 @@ func (repo *UserRepository) UpdateUser(tableName string, newUserData models.User
 	if err != nil {
 		return models.User{}, fmt.Errorf("UserRepository.UpdateUser: Failed to retrieve user ID %s from %s: %w", newUserData.ID, tableName, err)
 	}
+
+	// newUserData.ImageIDs = append(newUserData.ImageIDs, user.ImageIDs...)
+	newUserData.ImageIDs = updateImageIDs(newUserData, user)
+
+	// fmt.Printf("NEW USER DATA: (UPDATE USER): %v\n", newUserData)
+	// fmt.Printf("RETRIEVED USER: (UPDATE USER): %v\n", user)
+
 	err = user.Update(newUserData)
 	if err != nil {
 		return models.User{}, fmt.Errorf("UserRepository.UpdateUser: Failed to update user ID %s's fields: %w", user.ID, err)
 	}
 
+	// fmt.Printf("UPDATED USER: (UPDATE USER): %v\n", user)
 	var imagesStr string
 	if bytes, err := json.Marshal(user.ImageIDs); err == nil {
 		imagesStr = string(bytes)
 	} else {
 		return models.User{}, err
 	}
+
 	userEntity := aztables.EDMEntity{
 		Entity: aztables.Entity{
 			PartitionKey: PartitionKey,
@@ -176,6 +210,7 @@ func (repo *UserRepository) UpdateUser(tableName string, newUserData models.User
 	if err != nil {
 		return models.User{}, fmt.Errorf("UserRepository.UpdateEntity: Failed to update entity in %s: %w", tableName, err)
 	}
+
 	return user, nil
 }
 

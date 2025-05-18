@@ -17,14 +17,14 @@ type UserRepo interface {
 
 // UserService contains and handles a specific UserRepository object
 type UserService struct {
-	repo        UserRepo
-	eventRepo   EventRepo
-	blobService BlobStorageService
+	repo      UserRepo
+	eventRepo EventRepo
+	blobRepo  BlobRepo
 }
 
 // NewUserService constructs and returns a UserService object
-func NewUserService(r UserRepo, e EventRepo, b BlobStorageService) *UserService {
-	return &UserService{repo: r, eventRepo: e, blobService: b}
+func NewUserService(r UserRepo, e EventRepo, b BlobRepo) *UserService {
+	return &UserService{repo: r, eventRepo: e, blobRepo: b}
 }
 
 // GetUserByID handles calling the UserRepository GetUser function and returns the result of a query by the UserRepository

@@ -44,13 +44,14 @@ func SetupRouter() *http.ServeMux {
 	}
 
 	blobConfig, err := config.LoadBlobConfig()
-	blobService, err := services.NewBlobStorageService(blobConfig.AzureAccountName, blobConfig.AzureAccountKey, blobConfig.AzureContainerName)
+	blobRepo, err := repositories.NewBlobStorageService(blobConfig.AzureAccountName, blobConfig.AzureAccountKey, blobConfig.AzureContainerName)
 	if err != nil {
 		fmt.Printf("ERROR CREATING BLOB SERVICE: %v", err)
 	}
+	blobService := services.NewBlobService(blobRepo)
 	// Create user service with repository dependency
 	// This service will handle business logic for user operations
-	userService := services.NewUserService(userRepo, eventRepo, *blobService)
+	userService := services.NewUserService(userRepo, eventRepo, blobRepo)
 
 	// Initialize user handler with service dependency
 	// This handler will process HTTP requests and use the service layer
