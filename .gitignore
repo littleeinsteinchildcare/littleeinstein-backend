@@ -56,3 +56,9 @@ config.json
 .*
 !.gitignore
 !.air.toml
+
+
+# Azurite emulator files
+__azurite_*
+AzuriteConfig
+

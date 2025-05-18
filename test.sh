@@ -42,7 +42,7 @@ function test_post(){
 		-d '{\"username\":\"User $i\", \"email\":\"user$i@example.com\",\"id\":\"$i\", \"role\":\"member\"}' $BASE_URL$ENDPOINT"
 		run_test "POST User $i" 201
 	done
-	
+
 }
 
 function test_post_failure(){
@@ -55,7 +55,7 @@ function test_post_failure(){
 		-d '{\"username\":\"User $i\", \"email\":\"user$i@example.com\",\"id\":\"$i\", \"role\":\"member\"}' $BASE_URL$ENDPOINT"
 		run_test "POST User $i Failure" 400
 	done
-	
+
 }
 
 
@@ -66,7 +66,7 @@ function test_get(){
 		ENDPOINT="/users/$i"
 		CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' $BASE_URL$ENDPOINT"
 		run_test "Get User by ID $i" 200
-	done	
+	done
 }
 
 
@@ -78,7 +78,7 @@ function test_get_failure(){
 		ENDPOINT="/users/$i"
 		CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' $BASE_URL$ENDPOINT"
 		run_test "Get User by ID $i Failure" 404
-	done	
+	done
 }
 
 function test_update(){
@@ -91,7 +91,7 @@ function test_update(){
 		-d '{\"name\":\"UPDATED[$i] User $i\", \"email\":\"UPDATEDuser$i@example.com\",\"id\":\"$i\", \"role\":\"member\"}' $BASE_URL$ENDPOINT"
 		run_test "PUT User $i" 200
 	done
-	
+
 }
 
 function test_delete(){
@@ -102,7 +102,7 @@ function test_delete(){
 		ENDPOINT="/users/$i"
 		CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' -X DELETE $BASE_URL$ENDPOINT"
 		run_test "Delete User by ID $i" 204
-	done	
+	done
 }
 
 
@@ -127,14 +127,14 @@ function run_test(){
 	fi
 
 	if [ "$VERBOSE_MODE" = true ]; then
-		echo 
+		echo
 		echo -e "${B}Response:${NC}"
 		echo "$body" | tr -d '{}' | awk -F, '
-		{ 
+		{
 			for (i = 1; i <= NF; i++) {
 				if ($i ~ /"Username":/) {
 					print $i
-					print ""	
+					print ""
 				} else {
 					print $i
 				}
