@@ -68,18 +68,26 @@ func (h *EventHandler) GetAllEvents(w http.ResponseWriter, r *http.Request) {
 
 }
 
-// CreateUser handles POST requests to create a new user
+// CreateEvent handles POST requests to create a new user
 func (h *EventHandler) CreateEvent(w http.ResponseWriter, r *http.Request) {
 	eventData, err := utils.DecodeJSONRequest(r)
 	if err != nil {
 		utils.WriteJSONError(w, http.StatusBadRequest, "CreateEvent.DecodeRequest: Failed to decode JSON request", err)
+		return
 	}
 
-	creator, err := h.userService.GetUserByID(eventData["creator"].(string))
+	creatorID, err := utils.GetUserIDFromAuth(r)
+	// creator, err := h.userService.GetUserByID(eventData["creator"].(string))
+	creator, err := h.userService.GetUserByID(creatorID)
+	if err != nil {
+		utils.WriteJSONError(w, http.StatusNotFound, fmt.Sprintf("EventHandler.CreateEvent: Failed to find Creator with ID %s:", creatorID), err)
+		return
+	}
 	invitee_ids := strings.Split(eventData["invitees"].(string), ",")
 	var invitees_list []models.User
 
 	for _, id := range invitee_ids {
+		id = strings.TrimSpace(id)
 		user, err := h.userService.GetUserByID(id)
 		if err != nil {
 			utils.WriteJSONError(w, http.StatusNotFound, fmt.Sprintf("EventHandler.CreateEvent: Failed to find User with ID %s", id), err)
@@ -100,7 +108,7 @@ func (h *EventHandler) CreateEvent(w http.ResponseWriter, r *http.Request) {
 
 	err = h.eventService.CreateEvent(event)
 	if err != nil {
-		utils.WriteJSONError(w, http.StatusBadRequest, "EventHandler.CreateEvent: Failed to create Event", err)
+		utils.WriteJSONError(w, http.StatusConflict, "EventHandler.CreateEvent: Failed to create Event", err)
 		return
 	}
 
@@ -116,7 +124,8 @@ func (h *EventHandler) UpdateEvent(w http.ResponseWriter, r *http.Request) {
 	pathID := r.PathValue("id")
 	eventData, err := utils.DecodeJSONRequest(r)
 	if err != nil {
-		fmt.Printf("Error: %v", err)
+		utils.WriteJSONError(w, http.StatusBadRequest, "EventHandler.UpdateEvent: Failed to Decode JSON", nil)
+		return
 	}
 	if _, ok := eventData["id"]; !ok {
 		utils.WriteJSONError(w, http.StatusBadRequest, "EventHandler.UpdateEvent: Missing required field: id", nil)
@@ -141,7 +150,7 @@ func (h *EventHandler) UpdateEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := buildEventResponse(updatedEvent)
-	w.WriteHeader(http.StatusCreated)
+	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)
 }
 
@@ -151,7 +160,8 @@ func (h *EventHandler) DeleteEvent(w http.ResponseWriter, r *http.Request) {
 	err := h.eventService.DeleteEventByID(id)
 
 	if err != nil {
-		fmt.Printf("Error deleting event: %v", err)
+		utils.WriteJSONError(w, http.StatusNotFound, fmt.Sprintf("Error deleting event %s", id), err)
+		return
 	}
 
 	w.WriteHeader(http.StatusNoContent)
@@ -192,6 +202,7 @@ func (h *EventHandler) BuildPartialEvent(w http.ResponseWriter, eventData map[st
 		invitee_ids := strings.Split(eventData["invitees"].(string), ",")
 
 		for _, id := range invitee_ids {
+			id = strings.TrimSpace(id)
 			user, err := h.userService.GetUserByID(id)
 			if err != nil {
 				return event, err

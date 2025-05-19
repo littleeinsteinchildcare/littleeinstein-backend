@@ -7,6 +7,7 @@ UPDATE=false
 DELETE=false
 VERBOSE=false
 THOROUGH=false
+CLEANUP=false
 NUM_TESTS=1
 
 # Color codes
@@ -22,8 +23,9 @@ NC='\033[0m' # No Color (reset)
 ###################
 
 # Option Handling
-while getopts "n:pgudtvh" opt; do
+while getopts "n:pgudtcvh" opt; do
     case "$opt" in
+        c) CLEANUP=true ;;
         n) NUM_TESTS="$OPTARG" ;;
         p) POST=true ;;
         g) GET=true ;;
@@ -60,9 +62,9 @@ yellow() { echo -e "${Y}$1${NC}"; }
 blue()   { echo -e "${B}$1${NC}"; }
 
 
-###############
-#    TESTS    #
-###############
+#####################
+#    EVENT TESTS    #
+#####################
 
 BASE_URL="http://localhost:8080"
 ENDPOINT=""
@@ -72,12 +74,15 @@ test_post(){
  	echo  "$(yellow "Running POST 201 (Created) test...")"
 
 	for (( i = 1; i <("$NUM_TESTS"+1); i++)); do
-		ENDPOINT="/users"
+        inv1=$((i+1))
+        inv2=$((i+2))
+		ENDPOINT="/events"
 		CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' -X POST \
 		-H 'Content-Type: application/json' \
-		-d '{\"username\":\"User $i\", \"email\":\"user$i@example.com\",\"id\":\"$i\", \"role\":\"member\"}' \
+        -H 'X-User-ID: $i' \
+		-d '{\"eventname\":\"Event $i\", \"date\":\"1/$i/2025\",\"id\":\"$i\", \"starttime\":\"$i:00am\",\"endtime\":\"$i:00pm\", \"invitees\":\"$inv1, $inv2\"}' \
         $BASE_URL$ENDPOINT"
-		run_test "POST test <Create New Entity: User $i>" 201
+		run_test "POST test <Create New Entity: Event $i>" 201
 	done
 }
 
@@ -85,10 +90,13 @@ test_post_failure_bad_request(){
  	echo  "$(yellow "Running POST 400 (Bad Request) test...")"
 
 	for (( i = 1; i <("$NUM_TESTS"+1); i++)); do
-		ENDPOINT="/users"
-		CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}'  -X POST \
+        inv1=$((i+1))
+        inv2=$((i+2))
+		ENDPOINT="/events"
+		CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' -X POST \
 		-H 'Content-Type: application/json' \
-		-d '{\"username\":\"User $i\", \"email\":\"user$i@example.com\",\"id\":\"$i\", \"role\":\"member\",}'  \
+        -H 'X-User-ID: $i' \
+		-d '{\"eventname\":\"Event $i\", \"date\":\"1/$i/2025\",\"id\":\"$i\", \"starttime\":\"$i:00am\",\"endtime\":\"$i:00pm\", \"invitees\":\"$inv1, $inv2\",}' \
         $BASE_URL$ENDPOINT"
 		run_test "POST test <Bad Request: User $i>" 400
 	done
@@ -99,12 +107,16 @@ test_post_failure_entity_already_exists(){
  	echo  "$(yellow "Running POST 409 (Entity Exists) test...")"
 
 	for (( i = 1; i <("$NUM_TESTS"+1); i++)); do
-		ENDPOINT="/users"
-		CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}'  -X POST \
+        inv1=$((i+1))
+        inv2=$((i+2))
+		ENDPOINT="/events"
+		CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' -X POST \
 		-H 'Content-Type: application/json' \
-		-d '{\"username\":\"User $i\", \"email\":\"user$i@example.com\",\"id\":\"$i\", \"role\":\"member\"}'  \
+        -H 'X-User-ID: $i' \
+		-d '{\"eventname\":\"Event $i\", \"date\":\"1/$i/2025\",\"id\":\"$i\", \"starttime\":\"$i:00am\",\"endtime\":\"$i:00pm\", \"invitees\":\"$inv1, $inv2\"}' \
         $BASE_URL$ENDPOINT"
-		run_test "POST test <Entity Already Exists: User $i>" 409
+
+		run_test "POST test <Entity Already Exists: Event $i>" 409
 	done
 }
 
@@ -113,9 +125,9 @@ test_get(){
 	echo "$(yellow "Running GET 200 (OK) test...")"
 
 	for (( i = 1; i <("$NUM_TESTS"+1); i++)); do
-		ENDPOINT="/users/$i"
+		ENDPOINT="/events/$i"
 		CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' $BASE_URL$ENDPOINT"
-		run_test "GET test <OK: User $i>" 200
+		run_test "GET test <OK: Event $i>" 200
 	done	
 }
 
@@ -124,9 +136,9 @@ test_get_failure_entity_not_found(){
 	echo "$(yellow "Running GET 404 (Not Found) test...")"
 
 	for (( i = 1; i <("$NUM_TESTS"+1); i++)); do
-		ENDPOINT="/users/$i"
+		ENDPOINT="/events/$i"
 		CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' $BASE_URL$ENDPOINT"
-		run_test "GET test <Entity Not Found: User $i>" 404
+		run_test "GET test <Entity Not Found: Events $i>" 404
 	done	
 }
 
@@ -135,11 +147,14 @@ test_update(){
     echo "$(yellow "Running PUT 200 (OK) test...")"
 
 	for (( i = 1; i <("$NUM_TESTS"+1); i++)); do
-		ENDPOINT="/users/$i"
+        inv1=$((i+3))
+        inv2=$((i+4))
+		ENDPOINT="/events/$i"
 		CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}'  -X PUT \
 		-H 'Content-Type: application/json' \
-		-d '{\"name\":\"UPDATED[$i] User $i\", \"email\":\"UPDATEDuser$i@example.com\",\"id\":\"$i\", \"role\":\"member\"}' $BASE_URL$ENDPOINT"
-		run_test "PUT test <OK: User $i>" 200
+    	-d '{\"eventname\":\"UPDATED Event $i\", \"date\":\"9/$i/1991\",\"id\":\"$i\", \"starttime\":\"$i:30am\",\"endtime\":\"$i:30pm\", \"invitees\":\"$inv1, $inv2\"}' \
+        $BASE_URL$ENDPOINT"
+		run_test "PUT test <OK: Event $i>" 200
 	done
 	
 }
@@ -148,11 +163,14 @@ test_update_failure_bad_request(){
     echo "$(yellow "Running PUT 400 (Bad Request) test...")"
 
 	for (( i = 1; i <("$NUM_TESTS"+1); i++)); do
-		ENDPOINT="/users/$i"
+        inv1=$((i+3))
+        inv2=$((i+4))
+		ENDPOINT="/events/$i"
 		CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}'  -X PUT \
 		-H 'Content-Type: application/json' \
-		-d '{\"name\":\"UPDATED[$i] User $i\", \"email\":\"UPDATEDuser$i@example.com\",\"id\":\"$i\", \"role\":\"member\",}' $BASE_URL$ENDPOINT"
-		run_test "PUT test <Bad Request: User $i>" 400
+    	-d '{\"eventname\":\"Event $i\", \"date\":\"1/$i/2025\",\"id\":\"$i\", \"starttime\":\"$i:00am\",\"endtime\":\"$i:00pm\", \"invitees\":\"$inv1, $inv2\",}' \
+        $BASE_URL$ENDPOINT"
+		run_test "PUT test <Bad Request: Event $i>" 400
 	done
 	
 }
@@ -162,11 +180,14 @@ test_update_failure_entity_not_found(){
     echo "$(yellow "Running PUT 409 (Entity Not Found) test...")"
 
 	for (( i = 1; i <("$NUM_TESTS"+1); i++)); do
-		ENDPOINT="/users/$i"
+        inv1=$((i+3))
+        inv2=$((i+4))
+		ENDPOINT="/events/$i"
 		CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}'  -X PUT \
 		-H 'Content-Type: application/json' \
-		-d '{\"name\":\"UPDATED[$i] User $i\", \"email\":\"UPDATEDuser$i@example.com\",\"id\":\"$i\", \"role\":\"member\"}' $BASE_URL$ENDPOINT"
-		run_test "PUT test <Entity Not Found: User $i>" 404
+    	-d '{\"eventname\":\"Event $i\", \"date\":\"1/$i/2025\",\"id\":\"$i\", \"starttime\":\"$i:00am\",\"endtime\":\"$i:00pm\", \"invitees\":\"$inv1, $inv2\"}' \
+        $BASE_URL$ENDPOINT"
+		run_test "PUT test <Entity Not Found: Event $i>" 404
 	done
 	
 }
@@ -176,10 +197,12 @@ test_delete(){
  	echo  "$(yellow "Running DELETE 204 (No Content) test...")"
 
 	for (( i = 1; i <("$NUM_TESTS"+1); i++)); do
-		ENDPOINT="/users/$i"
-		CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' -X DELETE $BASE_URL$ENDPOINT"
-		run_test "DELETE test <No Content: User $i>" 204
-	done	
+		ENDPOINT="/events/$i"
+		CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' -X DELETE \
+		-H 'Content-Type: application/json' \
+        $BASE_URL$ENDPOINT"
+		run_test "DELETE test <No Content: Event $i>" 204
+    done
 }
 
 
@@ -187,8 +210,11 @@ test_delete_failure_entity_not_found(){
  	echo  "$(yellow "Running DELETE 404 (Entity Not Found) test...")"
 
 	for (( i = 1; i <("$NUM_TESTS"+1); i++)); do
-		ENDPOINT="/users/$i"
-		CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' -X DELETE $BASE_URL$ENDPOINT"
+        ENDPOINT="/events/$i"
+		CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' -X DELETE \
+		-H 'Content-Type: application/json' \
+        $BASE_URL$ENDPOINT"
+
 		run_test "DELETE test <Entity Not Found: User $i>" 404
 	done	
 }
@@ -202,7 +228,6 @@ run_test(){
 	body=$(echo "$response" | sed -e 's/HTTPSTATUS\:.*//g')
 	status=$(echo $response | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
 
-
 	if [ "$status" -eq "$expected_status" ]; then
         echo "$(green "$label succeeded -- (status: $status)")"
 	else
@@ -215,7 +240,7 @@ run_test(){
 		echo "$body" | tr -d '{}' | awk -F, '
 		{ 
 			for (i = 1; i <= NF; i++) {
-				if ($i ~ /"Username":/) {
+				if ($i ~ /"EventName":/) {
 					print $i
 					print ""	
 				} else {
@@ -227,18 +252,68 @@ run_test(){
     echo ""
 }
 
+#####################
+#   User Creation   #
+##################### 
+create_users(){
+ 	echo  "$(yellow "Creating Users...")"
+
+	for (( i = 1; i <("$NUM_TESTS"+5); i++)); do
+		ENDPOINT="/users"
+		CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' -X POST \
+		-H 'Content-Type: application/json' \
+		-d '{\"username\":\"User $i\", \"email\":\"user$i@example.com\",\"id\":\"$i\", \"role\":\"member\"}' \
+        $BASE_URL$ENDPOINT"
+		run_test "<Create New Entity: User $i>" 201
+	done
+}
 
 
+delete_users(){
+ 	echo  "$(yellow "Running DELETE 204 (No Content) test...")"
+
+	for (( i = 1; i <("$NUM_TESTS"+5); i++)); do
+		ENDPOINT="/users/$i"
+		CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' -X DELETE $BASE_URL$ENDPOINT"
+		run_test "<No Content: User $i>" 204
+	done	
+}
+
+
+
+#######################
+#   Setup & Cleanup   #
+#######################
 
 setup(){
 	echo -e "${B}Make sure the app is running: ${Y}go run cmd/api/main.go${NC}"
 	echo -e "${B}Ensure that azurite is running inside the tmp/ directory: ${Y}cd tmp/ && azurite${NC}"
+ 
+    CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' http://localhost:8080/users/111"
+    response=$(eval "$CURL_CMD")
+	status=$(echo $response | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
+
+	if [ "$status" -eq "000" ]; then
+        echo "$(red "GO API IS NOT CURRENTLY RUNNING")"
+        exit 1
+    fi
+    create_users
 }
+
+cleanup(){
+    echo "$(yellow "Deleting Users...")"
+    delete_users
+}
+
+
+
+############
+#   Main   #
+############
 
 setup
 if [ "$POST" = true ]; then
     test_post
-   
     if [ "$THOROUGH" = true ]; then
         test_post_failure_bad_request
         test_post_failure_entity_already_exists
@@ -268,4 +343,7 @@ if [ "$THOROUGH" = true ]; then
             test_update_failure_entity_not_found
         fi
     fi
+fi
+if [ "$CLEANUP" = true ]; then
+    cleanup
 fi

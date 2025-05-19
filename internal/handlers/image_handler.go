@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"io"
 	"net/http"
 	"path/filepath"
@@ -45,15 +44,6 @@ func NewImageController(blobService BlobService, statisticsService *services.Sta
 	}
 }
 
-func getUserIDFromAuth(r *http.Request) (string, error) {
-	//TODO! - Implement real auth grab (remove r from arguments, pass in context
-	userID := r.Header.Get("X-User-ID")
-	if userID == "" {
-		return "", errors.New("Request Header is missing required field: X-User-ID")
-	}
-	return userID, nil
-}
-
 func (h *ImageHandler) UploadImage(w http.ResponseWriter, r *http.Request) {
 	// Set appropriate headers
 	w.Header().Set("Content-Type", "application/json")
@@ -66,7 +56,7 @@ func (h *ImageHandler) UploadImage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get the userID from the request
-	userID, err := getUserIDFromAuth(r)
+	userID, err := utils.GetUserIDFromAuth(r)
 	if err != nil {
 		utils.WriteJSONError(w, http.StatusBadRequest, "Failed to retrieve userID", err)
 		return
@@ -149,7 +139,7 @@ func (h *ImageHandler) UploadImage(w http.ResponseWriter, r *http.Request) {
 func (c *ImageHandler) GetImage(w http.ResponseWriter, r *http.Request) {
 
 	// Get the userID from the request
-	userID, err := getUserIDFromAuth(r)
+	userID, err := utils.GetUserIDFromAuth(r)
 	if err != nil {
 		utils.WriteJSONError(w, http.StatusBadRequest, "Failed to retrieve userID", err)
 		return
@@ -181,7 +171,7 @@ func (h *ImageHandler) DeleteImage(w http.ResponseWriter, r *http.Request) {
 	// Set appropriate headers
 	w.Header().Set("Content-Type", "application/json")
 
-	userID, err := getUserIDFromAuth(r)
+	userID, err := utils.GetUserIDFromAuth(r)
 	if err != nil {
 		utils.WriteJSONError(w, http.StatusBadRequest, "Failed to retrieve userID", err)
 		return
