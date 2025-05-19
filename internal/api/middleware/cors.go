@@ -12,6 +12,7 @@ func CorsMiddleware(next http.Handler) http.Handler {
 		// TODO- CHANGE AWAY FROM WILDCARD
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 
+
 		// Specify which HTTP methods the client is allowed to use
 		// These are the standard REST methods plus OPTIONS for preflight requests
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")

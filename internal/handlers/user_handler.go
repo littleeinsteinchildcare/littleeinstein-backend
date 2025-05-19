@@ -132,6 +132,7 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		utils.WriteJSONError(w, http.StatusConflict, "UserHandler.CreateUser: Failed to create User", err)
+
 		return
 	}
 
