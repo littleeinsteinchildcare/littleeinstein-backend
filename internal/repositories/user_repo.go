@@ -180,7 +180,9 @@ func (repo *UserRepository) UpdateUser(tableName string, newUserData models.User
 		return models.User{}, fmt.Errorf("UserRepository.UpdateUser: Failed to retrieve user ID %s from %s: %w", newUserData.ID, tableName, err)
 	}
 
-	newUserData.Images = updateImages(newUserData, user)
+	if len(newUserData.Images) > len(user.Images) {
+		newUserData.Images = updateImages(newUserData, user)
+	}
 
 	err = user.Update(newUserData)
 	if err != nil {

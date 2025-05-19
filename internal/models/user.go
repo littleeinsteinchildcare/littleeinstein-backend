@@ -36,13 +36,38 @@ func (userModel *User) Update(newUserData User) error {
 	if newUserData.Role != "" {
 		userModel.Role = newUserData.Role
 	}
-	if len(newUserData.Images) > 0 {
+
+	if newUserData.Images != nil {
 		if len(newUserData.Images) >= 3 {
 			return errors.New("User Max number of Images exceeded")
 		} else {
 			userModel.Images = newUserData.Images
+			cleaned := []string{}
+			for _, img := range newUserData.Images {
+				if img != "" {
+					cleaned = append(cleaned, img)
+				}
+			}
+			userModel.Images = cleaned
+
 		}
+	} else {
+		cleaned := []string{}
+		for _, img := range newUserData.Images {
+			if img != "" {
+				cleaned = append(cleaned, img)
+			}
+		}
+		userModel.Images = cleaned
 	}
 	return nil
+}
 
+func (userModel *User) UpdateImages(newUserData User) error {
+	if len(newUserData.Images) >= 3 {
+		return errors.New("User Max Number of Images exceeded")
+	} else {
+		userModel.Images = newUserData.Images
+	}
+	return nil
 }

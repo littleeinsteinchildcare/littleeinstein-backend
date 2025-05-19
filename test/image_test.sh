@@ -9,6 +9,7 @@ THOROUGH=false
 CLEANUP=false
 # NUM_TESTS=1
 NUM_IMAGES=4
+MAX_NUM_IMAGES=4
 IMG_LIMIT=2
 # Color codes
 R='\033[0;31m'
@@ -34,6 +35,9 @@ fi
 
 while getopts "n:pgudtcvh" opt; do
     case "$opt" in
+		n) if [ "$OPTARG" -le $MAX_NUM_IMAGES ]; then
+			NUM_IMAGES="$OPTARG"
+		   fi	;;
         c) CLEANUP=true ;;
         p) POST=true ;;
         g) GET=true ;;

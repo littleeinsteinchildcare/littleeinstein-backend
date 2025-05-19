@@ -176,14 +176,46 @@ func (s *BlobStorageService) GetAllImages(ctx context.Context) ([]string, error)
 	return imgNames, nil
 }
 
+func removeImage(images []string, fileName string) []string {
+	var removed []string
+	removed = append(removed, "")
+	for _, img := range images {
+		if img != fileName {
+			removed = append(removed, img)
+		}
+	}
+	return removed
+}
 func (s *BlobStorageService) DeleteImage(ctx context.Context, userID, fileName string) error {
+
+	cfg, err := config.LoadAzTableConfig()
+	if err != nil {
+		return fmt.Errorf("BlobRepo.DeleteImage: Failed to Load Aztable config %w", err)
+	}
+	userRepo, err := NewUserRepo(*cfg)
+	if err != nil {
+		return fmt.Errorf("BlobRepo.DeleteImage: Failed to initialize User Repo %w", err)
+	}
+
+	user, err := userRepo.GetUser(services.USERSTABLE, userID)
+	if err != nil {
+		return fmt.Errorf("BlobRepo.DeleteImage: Failed to Get User from UserRepo")
+	}
+
+	user.Images = removeImage(user.Images, fileName)
+
+	_, err = userRepo.UpdateUser(services.USERSTABLE, user)
+	if err != nil {
+		return fmt.Errorf("BlobRepo.DeleteImage: Failed to remove filename")
+	}
+
 	// Construct the blob name from the image ID and file name
 	blobName := fmt.Sprintf("%s/%s", userID, fileName)
 
 	// Get a reference to the blob
 	blobURL := s.containerURL.NewBlockBlobURL(blobName)
 	// Delete the blob
-	_, err := blobURL.Delete(ctx, azblob.DeleteSnapshotsOptionNone, azblob.BlobAccessConditions{})
+	_, err = blobURL.Delete(ctx, azblob.DeleteSnapshotsOptionNone, azblob.BlobAccessConditions{})
 	return err
 }
 
