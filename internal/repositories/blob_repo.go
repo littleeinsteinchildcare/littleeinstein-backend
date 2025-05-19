@@ -159,6 +159,23 @@ func (s *BlobStorageService) GetImage(ctx context.Context, userID, fileName stri
 	return buffer.Bytes(), contentType, nil
 }
 
+func (s *BlobStorageService) GetAllImages(ctx context.Context) ([]string, error) {
+	var imgNames []string
+
+	for marker := (azblob.Marker{}); marker.NotDone(); {
+		listBlob, err := s.containerURL.ListBlobsFlatSegment(context.Background(), marker, azblob.ListBlobsSegmentOptions{})
+		if err != nil {
+			return nil, fmt.Errorf("BlobRepo.GetAllImages: Failed to list blobs: %w", err)
+		}
+
+		for _, blob := range listBlob.Segment.BlobItems {
+			imgNames = append(imgNames, blob.Name)
+		}
+		marker = listBlob.NextMarker
+	}
+	return imgNames, nil
+}
+
 func (s *BlobStorageService) DeleteImage(ctx context.Context, userID, fileName string) error {
 	// Construct the blob name from the image ID and file name
 	blobName := fmt.Sprintf("%s/%s", userID, fileName)
@@ -184,10 +201,7 @@ func (s *BlobStorageService) DeleteAllImages(userID string) error {
 			_, err := blobURL.Delete(context.Background(), azblob.DeleteSnapshotsOptionNone, azblob.BlobAccessConditions{})
 			if err != nil {
 				log.Printf("Failed to delete blob %s: %v", blob.Name, err)
-			} else {
-				log.Printf("Successfully delete blob %s", blob.Name)
 			}
-
 		}
 	}
 	return nil

@@ -9,16 +9,13 @@ import (
 // SetupRoutes configures all routes for the application
 func RegisterBlobRoutes(r *http.ServeMux, imageHandler *handlers.ImageHandler) {
 	// Image routes
-	// r.HandleFunc("/api/images/{id}/{fileName}", imageController.GetImage).Methods("GET")
-	r.HandleFunc("GET /images/{id}/{fileName}", imageHandler.GetImage)
+	r.HandleFunc("GET /api/image/{id}/{fileName}", imageHandler.GetImage)
+	r.HandleFunc("GET /api/images", imageHandler.GetAllImages)
 
-	// r.HandleFunc("/api/images", imageController.UploadImage).Methods("POST")
-	r.HandleFunc("POST /images", imageHandler.UploadImage)
+	r.HandleFunc("POST /api/image", imageHandler.UploadImage)
 
-	// r.HandleFunc("/api/images/{id}/{fileName}", imageController.DeleteImage).Methods("DELETE")
-	r.HandleFunc("DELETE /images/{id}/{fileName}", imageHandler.DeleteImage)
+	r.HandleFunc("DELETE /api/image/{id}/{fileName}", imageHandler.DeleteImage)
 
 	// Statistics route
-	// r.HandleFunc("/api/images/statistics", imageController.GetStatistics).Methods("GET")
-	r.HandleFunc("GET /images/statistics", imageHandler.GetStatistics)
+	r.HandleFunc("GET /api/images/statistics", imageHandler.GetStatistics)
 }

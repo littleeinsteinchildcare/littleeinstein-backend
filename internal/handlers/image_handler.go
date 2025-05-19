@@ -22,6 +22,7 @@ const (
 type BlobService interface {
 	UploadImage(ctx context.Context, fileName string, contentType string, data []byte, userID string) (*models.Image, error)
 	GetImage(ctx context.Context, userID, fileName string) ([]byte, string, error)
+	GetAllImages(ctx context.Context) ([]string, error)
 	DeleteImage(ctx context.Context, userID, fileName string) error
 }
 
@@ -165,6 +166,22 @@ func (c *ImageHandler) GetImage(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Disposition", "inline; filename="+fileName)
 	w.WriteHeader(http.StatusOK)
 	w.Write(data)
+}
+
+func (c *ImageHandler) GetAllImages(w http.ResponseWriter, r *http.Request) {
+
+	// Get the image from Azure Blob Storage
+	ctx := context.Background()
+	imgNames, err := c.blobService.GetAllImages(ctx)
+	if err != nil {
+		utils.WriteJSONError(w, http.StatusNotFound, "ImageHandler.GetAllImages: Failed to retrieve list of images", err)
+		return
+	}
+
+	// Set the content type header
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(imgNames)
 }
 
 func (h *ImageHandler) DeleteImage(w http.ResponseWriter, r *http.Request) {

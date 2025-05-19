@@ -22,6 +22,17 @@ NC='\033[0m' # No Color (reset)
 #    Utilities    #
 ###################
 
+# Default to running all
+if [[ $# -eq 0 || "$1" != -* ]]; then
+	echo "No options selected, running all tests, number of tests = 3"
+	NUM_TESTS=3
+	POST=true
+	GET=true
+	UPDATE=true
+	DELETE=true
+	THOROUGH=true
+	CLEANUP=true
+fi
 # Option Handling
 while getopts "n:pgudtcvh" opt; do
     case "$opt" in
@@ -76,7 +87,7 @@ test_post(){
 	for (( i = 1; i <("$NUM_TESTS"+1); i++)); do
         inv1=$((i+1))
         inv2=$((i+2))
-		ENDPOINT="/events"
+		ENDPOINT="/api/event"
 		CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' -X POST \
 		-H 'Content-Type: application/json' \
         -H 'X-User-ID: $i' \
@@ -92,7 +103,7 @@ test_post_failure_bad_request(){
 	for (( i = 1; i <("$NUM_TESTS"+1); i++)); do
         inv1=$((i+1))
         inv2=$((i+2))
-		ENDPOINT="/events"
+		ENDPOINT="/api/event"
 		CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' -X POST \
 		-H 'Content-Type: application/json' \
         -H 'X-User-ID: $i' \
@@ -109,7 +120,7 @@ test_post_failure_entity_already_exists(){
 	for (( i = 1; i <("$NUM_TESTS"+1); i++)); do
         inv1=$((i+1))
         inv2=$((i+2))
-		ENDPOINT="/events"
+		ENDPOINT="/api/event"
 		CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' -X POST \
 		-H 'Content-Type: application/json' \
         -H 'X-User-ID: $i' \
@@ -125,7 +136,7 @@ test_get(){
 	echo "$(yellow "Running GET 200 (OK) test...")"
 
 	for (( i = 1; i <("$NUM_TESTS"+1); i++)); do
-		ENDPOINT="/events/$i"
+		ENDPOINT="/api/event/$i"
 		CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' $BASE_URL$ENDPOINT"
 		run_test "GET test <OK: Event $i>" 200
 	done	
@@ -136,7 +147,7 @@ test_get_failure_entity_not_found(){
 	echo "$(yellow "Running GET 404 (Not Found) test...")"
 
 	for (( i = 1; i <("$NUM_TESTS"+1); i++)); do
-		ENDPOINT="/events/$i"
+		ENDPOINT="/api/event/$i"
 		CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' $BASE_URL$ENDPOINT"
 		run_test "GET test <Entity Not Found: Events $i>" 404
 	done	
@@ -146,7 +157,7 @@ test_get_failure_entity_not_found(){
 test_get_all(){
 	echo "$(yellow "Running GET (ALL) 200 (OK) test...")"
 
-    ENDPOINT="/events/all"
+    ENDPOINT="/api/events"
     CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' $BASE_URL$ENDPOINT"
     run_test "GET test <OK: Get All Events>" 200
 }
@@ -158,7 +169,7 @@ test_update(){
 	for (( i = 1; i <("$NUM_TESTS"+1); i++)); do
         inv1=$((i+3))
         inv2=$((i+4))
-		ENDPOINT="/events/$i"
+		ENDPOINT="/api/event/$i"
 		CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}'  -X PUT \
 		-H 'Content-Type: application/json' \
     	-d '{\"eventname\":\"UPDATED Event $i\", \"date\":\"9/$i/1991\",\"id\":\"$i\", \"starttime\":\"$i:30am\",\"endtime\":\"$i:30pm\", \"invitees\":\"$inv1, $inv2\"}' \
@@ -174,7 +185,7 @@ test_update_failure_bad_request(){
 	for (( i = 1; i <("$NUM_TESTS"+1); i++)); do
         inv1=$((i+3))
         inv2=$((i+4))
-		ENDPOINT="/events/$i"
+		ENDPOINT="/api/event/$i"
 		CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}'  -X PUT \
 		-H 'Content-Type: application/json' \
     	-d '{\"eventname\":\"Event $i\", \"date\":\"1/$i/2025\",\"id\":\"$i\", \"starttime\":\"$i:00am\",\"endtime\":\"$i:00pm\", \"invitees\":\"$inv1, $inv2\",}' \
@@ -191,7 +202,7 @@ test_update_failure_entity_not_found(){
 	for (( i = 1; i <("$NUM_TESTS"+1); i++)); do
         inv1=$((i+3))
         inv2=$((i+4))
-		ENDPOINT="/events/$i"
+		ENDPOINT="/api/event/$i"
 		CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}'  -X PUT \
 		-H 'Content-Type: application/json' \
     	-d '{\"eventname\":\"Event $i\", \"date\":\"1/$i/2025\",\"id\":\"$i\", \"starttime\":\"$i:00am\",\"endtime\":\"$i:00pm\", \"invitees\":\"$inv1, $inv2\"}' \
@@ -206,7 +217,7 @@ test_delete(){
  	echo  "$(yellow "Running DELETE 204 (No Content) test...")"
 
 	for (( i = 1; i <("$NUM_TESTS"+1); i++)); do
-		ENDPOINT="/events/$i"
+		ENDPOINT="/api/event/$i"
 		CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' -X DELETE \
 		-H 'Content-Type: application/json' \
         $BASE_URL$ENDPOINT"
@@ -219,7 +230,7 @@ test_delete_failure_entity_not_found(){
  	echo  "$(yellow "Running DELETE 404 (Entity Not Found) test...")"
 
 	for (( i = 1; i <("$NUM_TESTS"+1); i++)); do
-        ENDPOINT="/events/$i"
+        ENDPOINT="/api/event/$i"
 		CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' -X DELETE \
 		-H 'Content-Type: application/json' \
         $BASE_URL$ENDPOINT"
@@ -268,7 +279,7 @@ create_users(){
  	echo  "$(yellow "Creating Users...")"
 
 	for (( i = 1; i <("$NUM_TESTS"+5); i++)); do
-		ENDPOINT="/users"
+		ENDPOINT="/api/user"
 		CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' -X POST \
 		-H 'Content-Type: application/json' \
 		-d '{\"username\":\"User $i\", \"email\":\"user$i@example.com\",\"id\":\"$i\", \"role\":\"member\"}' \
@@ -282,7 +293,7 @@ delete_users(){
  	echo  "$(yellow "Running DELETE 204 (No Content) test...")"
 
 	for (( i = 1; i <("$NUM_TESTS"+5); i++)); do
-		ENDPOINT="/users/$i"
+		ENDPOINT="/api/user/$i"
 		CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' -X DELETE $BASE_URL$ENDPOINT"
 		run_test "<No Content: User $i>" 204
 	done	

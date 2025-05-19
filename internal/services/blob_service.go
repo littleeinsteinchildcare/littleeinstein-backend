@@ -8,6 +8,7 @@ import (
 type BlobRepo interface {
 	UploadImage(ctx context.Context, fileName string, contentType string, data []byte, userID string) (*models.Image, error)
 	GetImage(ctx context.Context, userID, fileName string) ([]byte, string, error)
+	GetAllImages(ctx context.Context) ([]string, error)
 	DeleteImage(ctx context.Context, userID, fileName string) error
 	DeleteAllImages(userID string) error
 }
@@ -34,6 +35,14 @@ func (s *BlobService) GetImage(ctx context.Context, userID, fileName string) ([]
 		return nil, "", err
 	}
 	return data, contentType, nil
+}
+
+func (s *BlobService) GetAllImages(ctx context.Context) ([]string, error) {
+	imageData, err := s.blobRepo.GetAllImages(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return imageData, nil
 }
 
 func (s *BlobService) DeleteImage(ctx context.Context, userID, fileName string) error {

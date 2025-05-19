@@ -3,14 +3,13 @@
 # Flags
 POST=false
 GET=false
-UPDATE=false
 DELETE=false
 VERBOSE=false
 THOROUGH=false
 CLEANUP=false
 # NUM_TESTS=1
 NUM_IMAGES=4
-
+IMG_LIMIT=2
 # Color codes
 R='\033[0;31m'
 G='\033[0;32m'
@@ -24,13 +23,20 @@ NC='\033[0m' # No Color (reset)
 ###################
 
 # Option Handling
+if [[ $# -eq 0 || "$1" != -* ]]; then
+	echo "No options selected, running all tests"
+	CLEANUP=true
+	POST=true
+	GET=true
+	DELETE=true
+	THOROUGH=true
+fi
+
 while getopts "n:pgudtcvh" opt; do
     case "$opt" in
         c) CLEANUP=true ;;
-        # n) NUM_TESTS="$OPTARG" ;;
         p) POST=true ;;
         g) GET=true ;;
-        u) UPDATE=true ;;
         d) DELETE=true ;;
         t) THOROUGH=true ;;
         v) VERBOSE=true ;;
@@ -49,7 +55,6 @@ show_help() {
     # echo "  -n <Num Tests>  Specify the Number of requests to make"
     echo "  -p              POST request testing"
     echo "  -g              GET request testing"
-    echo "  -u              UPDATE request testing"
     echo "  -d              DELETE request testing"
     echo "  -v              Verbose mode: Show full response message" 
     echo "  -t              Thorough test: Test all different failures and correct response codes" 
@@ -75,12 +80,40 @@ test_post(){
  	echo  "$(yellow "Running POST 201 (Created) test...")"
 
 	for (( i = 1; i <("$NUM_IMAGES"+1); i++)); do
-		ENDPOINT="/images"
+		ENDPOINT="/api/image"
 		CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' -X POST \
         -H 'X-User-ID: $i' \
 		-F 'image=@LEC_img$i.jpg' \
         $BASE_URL$ENDPOINT"
 		run_test "POST test <Upload New Image: LEC_img$i.jpg>" 201 #TODO - Consider switching Status Code
+	
+	done
+}
+
+test_post_one_user_multiple_images(){
+ 	echo  "$(yellow "Running POST (Single User) 201 (Created) test...")"
+
+	for (( i = 1; i < IMG_LIMIT+1; i++)); do
+		ENDPOINT="/api/image"
+		CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' -X POST \
+        -H 'X-User-ID: 1' \
+		-F 'image=@LEC_img$i.jpg' \
+        $BASE_URL$ENDPOINT"
+		run_test "POST test <Upload New Image: LEC_img$i.jpg>" 201 #TODO - Consider switching Status Code
+	
+	done
+}
+
+test_post_one_user_multiple_images_failure_exceeds_limit(){
+ 	echo  "$(yellow "Running POST (Max Image Limit Exceeded) 500 (Created) test...")"
+
+	for (( i = IMG_LIMIT+1; i <("$NUM_IMAGES"+1); i++)); do
+		ENDPOINT="/api/image"
+		CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' -X POST \
+        -H 'X-User-ID: 1' \
+		-F 'image=@LEC_img$i.jpg' \
+        $BASE_URL$ENDPOINT"
+		run_test "POST test <Upload New Image: LEC_img$i.jpg>" 500
 	
 	done
 }
@@ -88,59 +121,26 @@ test_post(){
 test_post_failure_bad_request(){
  	echo  "$(yellow "Running POST 400 (Bad Request) test...")"
 
-	# for (( i = 1; i <("$NUM_TESTS"+1); i++)); do
-    #     inv1=$((i+1))
-    #     inv2=$((i+2))
-	# 	ENDPOINT="/events"
-	# 	CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' -X POST \
-	# 	-H 'Content-Type: application/json' \
-    #     -H 'X-User-ID: $i' \
-	# 	-d '{\"eventname\":\"Event $i\", \"date\":\"1/$i/2025\",\"id\":\"$i\", \"starttime\":\"$i:00am\",\"endtime\":\"$i:00pm\", \"invitees\":\"$inv1, $inv2\",}' \
-    #     $BASE_URL$ENDPOINT"
-	# 	run_test "POST test <Bad Request: User $i>" 400
-	# done
-
-
 	for (( i = 1; i <("$NUM_IMAGES"+1); i++)); do
-		ENDPOINT="/images"
+		ENDPOINT="/api/image"
 		CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' -X POST \
-        -H 'X-User-Id: $i' \
+        -H 'X-User-I: $i' \
 		-F 'image=@LEC_img$i.jpg' \
         $BASE_URL$ENDPOINT"
-		run_test "POST test <Upload New Image: LEC_img$i.jpg>" 201 #TODO - Consider switching Status Code
+		run_test "POST test <Upload New Image: LEC_img$i.jpg>" 400 #TODO - Consider switching Status Code
 	
 	done
 
-
-
-
 }
-
-# test_post_failure_entity_already_exists(){
-#  	echo  "$(yellow "Running POST 409 (Entity Exists) test...")"
-
-# 	for (( i = 1; i <("$NUM_TESTS"+1); i++)); do
-#         inv1=$((i+1))
-#         inv2=$((i+2))
-# 		ENDPOINT="/events"
-# 		CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' -X POST \
-# 		-H 'Content-Type: application/json' \
-#         -H 'X-User-ID: $i' \
-# 		-d '{\"eventname\":\"Event $i\", \"date\":\"1/$i/2025\",\"id\":\"$i\", \"starttime\":\"$i:00am\",\"endtime\":\"$i:00pm\", \"invitees\":\"$inv1, $inv2\"}' \
-#         $BASE_URL$ENDPOINT"
-
-# 		run_test "POST test <Entity Already Exists: Event $i>" 409
-# 	done
-# }
-
 
 test_get(){
 	echo "$(yellow "Running GET 200 (OK) test...")"
 
-	for (( i = 1; i <("$NUM_TESTS"+1); i++)); do
-		ENDPOINT="/events/$i"
-		CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' $BASE_URL$ENDPOINT"
-		run_test "GET test <OK: Event $i>" 200
+	for (( i = 1; i <("$NUM_IMAGES"+1); i++)); do
+		ENDPOINT="/api/image/$i/LEC_img$i.jpg"
+		CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' -X GET $BASE_URL$ENDPOINT \
+		-H 'X-User-ID: $i' -o dl_LEC_img$i.jpg"
+		run_test "GET test <OK: LEC_img$i.jpg>" 200
 	done	
 }
 
@@ -148,11 +148,22 @@ test_get(){
 test_get_failure_entity_not_found(){
 	echo "$(yellow "Running GET 404 (Not Found) test...")"
 
-	for (( i = 1; i <("$NUM_TESTS"+1); i++)); do
-		ENDPOINT="/events/$i"
-		CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' $BASE_URL$ENDPOINT"
-		run_test "GET test <Entity Not Found: Events $i>" 404
+	for (( i = 1; i <("$NUM_IMAGES"+1); i++)); do
+		ENDPOINT="/api/image/$i/LEC_img$i.jpg"
+		CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' -X GET $BASE_URL$ENDPOINT \
+		-H 'X-User-ID: $i' -o dl_LEC_img$i.jpg"
+		run_test "GET test <Entity Not Found: LEC_img$i.jpg>" 404
 	done	
+
+
+}
+
+test_get_all(){
+	echo "$(yellow "Running GET (ALL) 200 (OK) test...")"
+
+	ENDPOINT="/api/images"
+	CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' $BASE_URL$ENDPOINT"
+	run_test "GET test <OK: Get All Image Names>" 200
 }
 
 
@@ -160,7 +171,7 @@ test_delete(){
  	echo  "$(yellow "Running DELETE 204 (No Content) test...")"
 
 	for (( i = 1; i <("$NUM_IMAGES"+1); i++)); do
-		ENDPOINT="/images/$i"
+		ENDPOINT="/api/image/$i"
 		CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' -X DELETE \
         -H 'X-User-ID: $i' \
 		-F 'image=@LEC_img$i.jpg' \
@@ -168,23 +179,19 @@ test_delete(){
 		run_test "POST test <Delete Image: LEC_img$i.jpg>" 200
 	done
 
-
-
-
 }
-
 
 test_delete_failure_entity_not_found(){
  	echo  "$(yellow "Running DELETE 404 (Entity Not Found) test...")"
 
-	for (( i = 1; i <("$NUM_TESTS"+1); i++)); do
-        ENDPOINT="/events/$i"
+	for (( i = 1; i <("$NUM_IMAGES"+1); i++)); do
+		ENDPOINT="/api/image/$i"
 		CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' -X DELETE \
-		-H 'Content-Type: application/json' \
-        $BASE_URL$ENDPOINT"
-
-		run_test "DELETE test <Entity Not Found: User $i>" 404
-	done	
+        -H 'X-User-ID: $i' \
+		-F 'image=@LEC_img$i.jpg' \
+        $BASE_URL$ENDPOINT/LEC_img$i.jpg"
+		run_test "POST test <Entity Not Found: LEC_img$i.jpg>" 404
+	done
 }
 
 run_test(){
@@ -226,8 +233,8 @@ run_test(){
 create_users(){
  	echo  "$(yellow "Creating Users...")"
 
-	for (( i = 1; i <("$NUM_TESTS"+5); i++)); do
-		ENDPOINT="/users"
+	for (( i = 1; i <("$NUM_IMAGES"+1); i++)); do
+		ENDPOINT="/api/user"
 		CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' -X POST \
 		-H 'Content-Type: application/json' \
 		-d '{\"username\":\"User $i\", \"email\":\"user$i@example.com\",\"id\":\"$i\", \"role\":\"member\"}' \
@@ -240,11 +247,8 @@ create_users(){
 delete_users(){
  	echo  "$(yellow "Running DELETE 204 (No Content) test...")"
 
-	# CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' -X DELETE $BASE_URL/users/1"
-	# run_test "<No Content: User $1>" 204
-
-	for (( i = 1; i <("$NUM_TESTS"+5); i++)); do
-		ENDPOINT="/users/$i"
+	for (( i = 1; i <("$NUM_IMAGES"+1); i++)); do
+		ENDPOINT="/api/user/$i"
 		CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' -X DELETE $BASE_URL$ENDPOINT"
 		run_test "<No Content: User $i>" 204
 	done	
@@ -275,6 +279,13 @@ setup(){
 cleanup(){
     echo "$(yellow "Deleting Users...")"
     delete_users
+	if [ "$GET" = true ]; then {
+		rm dl_LEC_img1.jpg
+		rm dl_LEC_img2.jpg
+		rm dl_LEC_img3.jpg
+		rm dl_LEC_img4.jpg
+	}
+	fi
 }
 
 
@@ -287,12 +298,14 @@ setup
 if [ "$POST" = true ]; then
     test_post
     if [ "$THOROUGH" = true ]; then
+		test_post_one_user_multiple_images
+		test_post_one_user_multiple_images_failure_exceeds_limit
         test_post_failure_bad_request
-        # test_post_failure_entity_already_exists
     fi
 fi
 if [ "$GET" = true ]; then
     test_get
+	test_get_all
 fi
 if [ "$DELETE" = true ]; then
     test_delete
