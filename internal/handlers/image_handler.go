@@ -22,8 +22,8 @@ const (
 
 type BlobService interface {
 	UploadImage(ctx context.Context, fileName string, contentType string, data []byte, userID string) (*models.Image, error)
-	GetImage(ctx context.Context, imageID, fileName string) ([]byte, string, error)
-	DeleteImage(ctx context.Context, imageID, fileName string) error
+	GetImage(ctx context.Context, userID, fileName string) ([]byte, string, error)
+	DeleteImage(ctx context.Context, userID, fileName string) error
 }
 
 type StatisticsService interface {

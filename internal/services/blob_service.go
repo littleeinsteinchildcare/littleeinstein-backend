@@ -9,6 +9,7 @@ type BlobRepo interface {
 	UploadImage(ctx context.Context, fileName string, contentType string, data []byte, userID string) (*models.Image, error)
 	GetImage(ctx context.Context, userID, fileName string) ([]byte, string, error)
 	DeleteImage(ctx context.Context, userID, fileName string) error
+	DeleteAllImages(userID string) error
 }
 
 type BlobService struct {

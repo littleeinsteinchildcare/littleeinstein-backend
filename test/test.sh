@@ -106,8 +106,6 @@ function test_delete(){
 }
 
 
-
-
 function run_test(){
 	local label=$1
 	local expected_status=$2

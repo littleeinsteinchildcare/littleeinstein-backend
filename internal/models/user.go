@@ -5,20 +5,20 @@ import (
 )
 
 type User struct {
-	ID       string
-	Name     string
-	Email    string
-	Role     string
-	ImageIDs []string
+	ID     string
+	Name   string
+	Email  string
+	Role   string
+	Images []string
 }
 
-func NewUser(id string, name string, email string, role string, imageIDs []string) *User {
+func NewUser(id string, name string, email string, role string, images []string) *User {
 	return &User{
-		ID:       id,
-		Name:     name,
-		Email:    email,
-		Role:     role,
-		ImageIDs: imageIDs,
+		ID:     id,
+		Name:   name,
+		Email:  email,
+		Role:   role,
+		Images: images,
 	}
 }
 
@@ -36,11 +36,11 @@ func (userModel *User) Update(newUserData User) error {
 	if newUserData.Role != "" {
 		userModel.Role = newUserData.Role
 	}
-	if len(newUserData.ImageIDs) > 0 {
-		if len(newUserData.ImageIDs) >= 3 {
+	if len(newUserData.Images) > 0 {
+		if len(newUserData.Images) >= 3 {
 			return errors.New("User Max number of Images exceeded")
 		} else {
-			userModel.ImageIDs = newUserData.ImageIDs
+			userModel.Images = newUserData.Images
 		}
 	}
 	return nil

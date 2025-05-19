@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"net/url"
 	"os"
 	"time"
@@ -31,9 +32,6 @@ func NewBlobStorageService(accountName, accountKey, containerName string) (*Blob
 	pipeline := azblob.NewPipeline(credential, azblob.PipelineOptions{})
 
 	// From the Azure portal, get your storage account blob service URL endpoint.
-	// URL, _ := url.Parse(fmt.Sprintf("https://%s.blob.core.windows.net/%s", accountName, containerName))
-	// URL, _ := url.Parse(fmt.Sprintf("http://127.0.0.1:10000/%s/%s", accountName, containerName))
-
 	var containerURLStr string
 	switch os.Getenv("APP_ENV") {
 	case "production":
@@ -83,7 +81,7 @@ func (s *BlobStorageService) UploadImage(ctx context.Context, fileName string, c
 	if err != nil {
 		return &models.Image{}, fmt.Errorf("BlobRepo.UploadImage: Failed to Get User from UserRepo")
 	}
-	user.ImageIDs = append(user.ImageIDs, fileName)
+	user.Images = append(user.Images, fileName)
 
 	_, err = userRepo.UpdateUser(services.USERSTABLE, user)
 	if err != nil {
@@ -170,4 +168,27 @@ func (s *BlobStorageService) DeleteImage(ctx context.Context, userID, fileName s
 	// Delete the blob
 	_, err := blobURL.Delete(ctx, azblob.DeleteSnapshotsOptionNone, azblob.BlobAccessConditions{})
 	return err
+}
+
+func (s *BlobStorageService) DeleteAllImages(userID string) error {
+	userImagesFolder := fmt.Sprintf("%s/", userID)
+	for marker := (azblob.Marker{}); marker.NotDone(); {
+		listBlob, err := s.containerURL.ListBlobsFlatSegment(context.Background(), marker, azblob.ListBlobsSegmentOptions{Prefix: userImagesFolder})
+		if err != nil {
+			return fmt.Errorf("Failed to list blobs for User %s: %w", userID, err)
+		}
+		marker = listBlob.NextMarker
+
+		for _, blob := range listBlob.Segment.BlobItems {
+			blobURL := s.containerURL.NewBlockBlobURL(blob.Name)
+			_, err := blobURL.Delete(context.Background(), azblob.DeleteSnapshotsOptionNone, azblob.BlobAccessConditions{})
+			if err != nil {
+				log.Printf("Failed to delete blob %s: %v", blob.Name, err)
+			} else {
+				log.Printf("Successfully delete blob %s", blob.Name)
+			}
+
+		}
+	}
+	return nil
 }

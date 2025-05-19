@@ -131,7 +131,7 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	err = h.userService.CreateUser(user)
 
 	if err != nil {
-		utils.WriteJSONError(w, http.StatusBadRequest, "UserHandler.CreateUser: Failed to create User", err)
+		utils.WriteJSONError(w, http.StatusConflict, "UserHandler.CreateUser: Failed to create User", err)
 		return
 	}
 
@@ -149,6 +149,7 @@ func buildUserResponse(user models.User) map[string]interface{} {
 		"Username": user.Name,
 		"Email":    user.Email,
 		"Role":     user.Role,
+		"Images":   user.Images,
 	}
 	return response
 }

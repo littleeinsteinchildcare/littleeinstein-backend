@@ -76,6 +76,10 @@ func (s *UserService) DeleteUserByID(id string) error {
 	if err3 != nil {
 		return err3
 	}
+	err4 := s.blobRepo.DeleteAllImages(id)
+	if err4 != nil {
+		return err4
+	}
 
 	// Return the deleted user data as a model
 	// Grab the blob storage IDs from that model

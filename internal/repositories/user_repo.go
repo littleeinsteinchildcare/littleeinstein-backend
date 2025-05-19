@@ -55,13 +55,13 @@ func (repo *UserRepository) GetUser(tableName string, id string) (models.User, e
 		Role:  myEntity.Properties["Role"].(string),
 	}
 
-	if entityImageIDs, ok := myEntity.Properties["ImageIDs"]; ok {
-		if imageIDsString, ok := entityImageIDs.(string); ok {
-			var imageIDs []string
-			if err := json.Unmarshal([]byte(imageIDsString), &imageIDs); err != nil {
+	if entityImages, ok := myEntity.Properties["Images"]; ok {
+		if imagesString, ok := entityImages.(string); ok {
+			var images []string
+			if err := json.Unmarshal([]byte(imagesString), &images); err != nil {
 				return models.User{}, fmt.Errorf("UserRepository.GetUser: Failed to parse Image IDs")
 			}
-			user.ImageIDs = imageIDs
+			user.Images = images
 		}
 	}
 	return user, nil
@@ -96,8 +96,18 @@ func (repo *UserRepository) GetAllUsers(tableName string) ([]models.User, error)
 				Name:  myEntity.Properties["Username"].(string),
 				Email: myEntity.Properties["Email"].(string),
 				Role:  myEntity.Properties["Role"].(string),
-				//TODO - Handle Image IDs
 			}
+
+			if entityImages, ok := myEntity.Properties["Images"]; ok {
+				if imagesString, ok := entityImages.(string); ok {
+					var images []string
+					if err := json.Unmarshal([]byte(imagesString), &images); err != nil {
+						return []models.User{}, fmt.Errorf("UserRepository.GetAllUsers: Failed to parse Image IDs")
+					}
+					user.Images = images
+				}
+			}
+
 			users = append(users, user)
 		}
 
@@ -110,7 +120,7 @@ func (repo *UserRepository) GetAllUsers(tableName string) ([]models.User, error)
 func (repo *UserRepository) CreateUser(tableName string, user models.User) error {
 
 	var imagesStr string
-	if bytes, err := json.Marshal(user.ImageIDs); err == nil {
+	if bytes, err := json.Marshal(user.Images); err == nil {
 		imagesStr = string(bytes)
 	} else {
 		return err
@@ -126,7 +136,7 @@ func (repo *UserRepository) CreateUser(tableName string, user models.User) error
 			"Username": user.Name,
 			"Email":    user.Email,
 			"Role":     user.Role,
-			"ImageIDs": imagesStr,
+			"Images":   imagesStr,
 		},
 	}
 
@@ -146,12 +156,12 @@ func (repo *UserRepository) CreateUser(tableName string, user models.User) error
 	return nil
 }
 
-func updateImageIDs(newUserData models.User, user models.User) []string {
+func updateImages(newUserData models.User, user models.User) []string {
 	imageSet := make(map[string]struct{})
-	for _, id := range user.ImageIDs {
+	for _, id := range user.Images {
 		imageSet[id] = struct{}{}
 	}
-	for _, id := range newUserData.ImageIDs {
+	for _, id := range newUserData.Images {
 		imageSet[id] = struct{}{}
 	}
 	uniqueList := make([]string, 0, len(imageSet))
@@ -170,20 +180,15 @@ func (repo *UserRepository) UpdateUser(tableName string, newUserData models.User
 		return models.User{}, fmt.Errorf("UserRepository.UpdateUser: Failed to retrieve user ID %s from %s: %w", newUserData.ID, tableName, err)
 	}
 
-	// newUserData.ImageIDs = append(newUserData.ImageIDs, user.ImageIDs...)
-	newUserData.ImageIDs = updateImageIDs(newUserData, user)
-
-	// fmt.Printf("NEW USER DATA: (UPDATE USER): %v\n", newUserData)
-	// fmt.Printf("RETRIEVED USER: (UPDATE USER): %v\n", user)
+	newUserData.Images = updateImages(newUserData, user)
 
 	err = user.Update(newUserData)
 	if err != nil {
 		return models.User{}, fmt.Errorf("UserRepository.UpdateUser: Failed to update user ID %s's fields: %w", user.ID, err)
 	}
 
-	// fmt.Printf("UPDATED USER: (UPDATE USER): %v\n", user)
 	var imagesStr string
-	if bytes, err := json.Marshal(user.ImageIDs); err == nil {
+	if bytes, err := json.Marshal(user.Images); err == nil {
 		imagesStr = string(bytes)
 	} else {
 		return models.User{}, err
@@ -198,7 +203,7 @@ func (repo *UserRepository) UpdateUser(tableName string, newUserData models.User
 			"Username": user.Name,
 			"Email":    user.Email,
 			"Role":     user.Role,
-			"ImageIDs": imagesStr,
+			"Images":   imagesStr,
 		},
 	}
 
