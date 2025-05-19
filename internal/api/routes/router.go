@@ -2,6 +2,7 @@ package routes
 
 import (
 	"encoding/json"
+	"fmt"
 	"littleeinsteinchildcare/backend/internal/config"
 	"littleeinsteinchildcare/backend/internal/handlers"
 	"littleeinsteinchildcare/backend/internal/repositories"
@@ -42,9 +43,16 @@ func SetupRouter() *http.ServeMux {
 		log.Fatalf("Router.SetupRouter: Failed to create event repository: %v", err)
 	}
 
+
+	blobConfig, err := config.LoadBlobConfig()
+	blobRepo, err := repositories.NewBlobStorageService(blobConfig.AzureAccountName, blobConfig.AzureAccountKey, blobConfig.AzureContainerName)
+	if err != nil {
+		fmt.Printf("ERROR CREATING BLOB SERVICE: %v", err)
+	}
+	blobService := services.NewBlobService(blobRepo)
 	// Create user service with repository dependency
 	// This service will handle business logic for user operations
-	userService := services.NewUserService(userRepo, eventRepo)
+	userService := services.NewUserService(userRepo, eventRepo, blobRepo)
 
 	// Initialize user handler with service dependency
 	// This handler will process HTTP requests and use the service layer
@@ -64,6 +72,14 @@ func SetupRouter() *http.ServeMux {
 	// Register all event-related routes (create, get, update, delete)
 	RegisterEventRoutes(router, eventHandler)
 
+
+	// statService := services.StatisticsService{}
+	statService := services.NewStatisticsService(handlers.MaxUploadSize)
+	imageHandler := handlers.NewImageController(blobService, statService)
+	RegisterBlobRoutes(router, imageHandler)
+
+	// Register Azure B2C auth endpoint
+
 	// ---------- BANNER MODULE SETUP ----------
 	// Create banner service (no repository needed)
 	bannerService := services.NewBannerService()
@@ -75,6 +91,7 @@ func SetupRouter() *http.ServeMux {
 	RegisterBannerRoutes(router, bannerHandler)
 
 	// ----------Register Azure B2C Auth Endpoint ----------
+
 	registerAzureB2CEndpoint(router)
 
 	// ---------- API INFORMATION ENDPOINT ----------

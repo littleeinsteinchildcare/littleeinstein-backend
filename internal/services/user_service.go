@@ -19,11 +19,12 @@ type UserRepo interface {
 type UserService struct {
 	repo      UserRepo
 	eventRepo EventRepo
+	blobRepo  BlobRepo
 }
 
 // NewUserService constructs and returns a UserService object
-func NewUserService(r UserRepo, e EventRepo) *UserService {
-	return &UserService{repo: r, eventRepo: e}
+func NewUserService(r UserRepo, e EventRepo, b BlobRepo) *UserService {
+	return &UserService{repo: r, eventRepo: e, blobRepo: b}
 }
 
 // GetUserByID handles calling the UserRepository GetUser function and returns the result of a query by the UserRepository
@@ -75,6 +76,15 @@ func (s *UserService) DeleteUserByID(id string) error {
 	if err3 != nil {
 		return err3
 	}
+	err4 := s.blobRepo.DeleteAllImages(id)
+	if err4 != nil {
+		return err4
+	}
+
+	// Return the deleted user data as a model
+	// Grab the blob storage IDs from that model
+	// Call the blob service and delete those by ID
+	// Delete the entire blob as a user
 
 	return nil
 }

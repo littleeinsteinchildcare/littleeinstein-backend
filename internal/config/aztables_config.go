@@ -16,7 +16,7 @@ func LoadAzTableConfig() (*AzTableConfig, error) {
 	//TODO: Add JSON config/read from file?
 
 	var config AzTableConfig
-	if os.Getenv("AZURE_STORAGE_ACCOUNT_NAME") == "" || os.Getenv("AZURE_STORAGE_ACCOUNT_KEY") == "" || os.Getenv("AZURE_STORAGE_SERVICE_URL") == "" {
+	if os.Getenv("AZURE_STORAGE_ACCOUNT_NAME") == "" || os.Getenv("AZURE_STORAGE_ACCOUNT_KEY") == "" || os.Getenv("AZURE_TABLE_SERVICE_URL") == "" {
 		return nil, errors.New("Missing environment variables for AzTableConfig")
 	}
 	if os.Getenv("AZURE_STORAGE_ACCOUNT_NAME") != "" {
@@ -25,8 +25,8 @@ func LoadAzTableConfig() (*AzTableConfig, error) {
 	if os.Getenv("AZURE_STORAGE_ACCOUNT_KEY") != "" {
 		config.AzureAccountKey = os.Getenv("AZURE_STORAGE_ACCOUNT_KEY")
 	}
-	if os.Getenv("AZURE_STORAGE_SERVICE_URL") != "" {
-		config.AzureContainerName = os.Getenv("AZURE_STORAGE_SERVICE_URL")
+	if os.Getenv("AZURE_TABLE_SERVICE_URL") != "" {
+		config.AzureContainerName = os.Getenv("AZURE_TABLE_SERVICE_URL")
 	}
 	return &config, nil
 }

@@ -55,6 +55,15 @@ func (repo *UserRepository) GetUser(tableName string, id string) (models.User, e
 		Role:  myEntity.Properties["Role"].(string),
 	}
 
+	if entityImages, ok := myEntity.Properties["Images"]; ok {
+		if imagesString, ok := entityImages.(string); ok {
+			var images []string
+			if err := json.Unmarshal([]byte(imagesString), &images); err != nil {
+				return models.User{}, fmt.Errorf("UserRepository.GetUser: Failed to parse Image IDs")
+			}
+			user.Images = images
+		}
+	}
 	return user, nil
 }
 
@@ -88,6 +97,17 @@ func (repo *UserRepository) GetAllUsers(tableName string) ([]models.User, error)
 				Email: myEntity.Properties["Email"].(string),
 				Role:  myEntity.Properties["Role"].(string),
 			}
+
+			if entityImages, ok := myEntity.Properties["Images"]; ok {
+				if imagesString, ok := entityImages.(string); ok {
+					var images []string
+					if err := json.Unmarshal([]byte(imagesString), &images); err != nil {
+						return []models.User{}, fmt.Errorf("UserRepository.GetAllUsers: Failed to parse Image IDs")
+					}
+					user.Images = images
+				}
+			}
+
 			users = append(users, user)
 		}
 
@@ -99,6 +119,13 @@ func (repo *UserRepository) GetAllUsers(tableName string) ([]models.User, error)
 // CreateUser creates an aztable entity in the specified table name, creating the table if it doesn't exist
 func (repo *UserRepository) CreateUser(tableName string, user models.User) error {
 
+	var imagesStr string
+	if bytes, err := json.Marshal(user.Images); err == nil {
+		imagesStr = string(bytes)
+	} else {
+		return err
+	}
+
 	//https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/sdk/data/aztables
 	userEntity := aztables.EDMEntity{
 		Entity: aztables.Entity{
@@ -109,6 +136,7 @@ func (repo *UserRepository) CreateUser(tableName string, user models.User) error
 			"Username": user.Name,
 			"Email":    user.Email,
 			"Role":     user.Role,
+			"Images":   imagesStr,
 		},
 	}
 
@@ -128,6 +156,21 @@ func (repo *UserRepository) CreateUser(tableName string, user models.User) error
 	return nil
 }
 
+func updateImages(newUserData models.User, user models.User) []string {
+	imageSet := make(map[string]struct{})
+	for _, id := range user.Images {
+		imageSet[id] = struct{}{}
+	}
+	for _, id := range newUserData.Images {
+		imageSet[id] = struct{}{}
+	}
+	uniqueList := make([]string, 0, len(imageSet))
+	for id := range imageSet {
+		uniqueList = append(uniqueList, id)
+	}
+	return uniqueList
+}
+
 func (repo *UserRepository) UpdateUser(tableName string, newUserData models.User) (models.User, error) {
 	ctx := context.Background()
 	tableClient := repo.serviceClient.NewClient(tableName)
@@ -136,9 +179,21 @@ func (repo *UserRepository) UpdateUser(tableName string, newUserData models.User
 	if err != nil {
 		return models.User{}, fmt.Errorf("UserRepository.UpdateUser: Failed to retrieve user ID %s from %s: %w", newUserData.ID, tableName, err)
 	}
+
+	if len(newUserData.Images) > len(user.Images) {
+		newUserData.Images = updateImages(newUserData, user)
+	}
+
 	err = user.Update(newUserData)
 	if err != nil {
 		return models.User{}, fmt.Errorf("UserRepository.UpdateUser: Failed to update user ID %s's fields: %w", user.ID, err)
+	}
+
+	var imagesStr string
+	if bytes, err := json.Marshal(user.Images); err == nil {
+		imagesStr = string(bytes)
+	} else {
+		return models.User{}, err
 	}
 
 	userEntity := aztables.EDMEntity{
@@ -150,6 +205,7 @@ func (repo *UserRepository) UpdateUser(tableName string, newUserData models.User
 			"Username": user.Name,
 			"Email":    user.Email,
 			"Role":     user.Role,
+			"Images":   imagesStr,
 		},
 	}
 
@@ -161,6 +217,7 @@ func (repo *UserRepository) UpdateUser(tableName string, newUserData models.User
 	if err != nil {
 		return models.User{}, fmt.Errorf("UserRepository.UpdateEntity: Failed to update entity in %s: %w", tableName, err)
 	}
+
 	return user, nil
 }
 

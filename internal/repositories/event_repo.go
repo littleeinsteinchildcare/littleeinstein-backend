@@ -73,10 +73,6 @@ func (repo *EventRepository) GetEvent(tableName string, id string) (models.Event
 	// Process Invitee IDs to store list of Users in Event struct
 	invitee_ids := strings.Split(myEntity.Properties["Invitees"].(string), ",")
 
-	for _, id := range invitee_ids {
-		fmt.Printf("%v ", id)
-	}
-
 	var invitees_list []models.User
 
 	for _, id := range invitee_ids {
@@ -177,6 +173,7 @@ func (repo *EventRepository) CreateEvent(tableName string, event models.Event) e
 	if err != nil {
 		return fmt.Errorf("EventRepo.CreateEvent: Failed to add event entity %w", err)
 	}
+
 	return nil
 }
 

@@ -2,6 +2,7 @@ package utils
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 )
@@ -30,3 +31,14 @@ func WriteJSONError(w http.ResponseWriter, status int, msg string, err error) {
 	}
 
 }
+
+
+func GetUserIDFromAuth(r *http.Request) (string, error) {
+	//TODO! - Implement real auth grab (remove r from arguments, pass in context
+	userID := r.Header.Get("X-User-ID")
+	if userID == "" {
+		return "", errors.New("Request Header is missing required field: X-User-ID")
+	}
+	return userID, nil
+}
+
