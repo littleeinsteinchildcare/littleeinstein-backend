@@ -119,6 +119,15 @@ test_get(){
 	done	
 }
 
+test_get_all(){
+	echo "$(yellow "Running GET (ALL) 200 (OK) test...")"
+
+	ENDPOINT="/users/all"
+	CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' $BASE_URL$ENDPOINT"
+	run_test "GET test <OK: Get All Users>" 200
+}
+
+
 
 test_get_failure_entity_not_found(){
 	echo "$(yellow "Running GET 404 (Not Found) test...")"
@@ -233,6 +242,15 @@ run_test(){
 setup(){
 	echo -e "${B}Make sure the app is running: ${Y}go run cmd/api/main.go${NC}"
 	echo -e "${B}Ensure that azurite is running inside the tmp/ directory: ${Y}cd tmp/ && azurite${NC}"
+    CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' -I http://localhost:8080"
+    response=$(eval "$CURL_CMD")
+	status=$(echo $response | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
+
+	if [ "$status" -eq "000" ]; then
+        echo "$(red "GO API IS NOT CURRENTLY RUNNING")"
+        exit 1
+    fi
+
 }
 
 setup
@@ -246,6 +264,7 @@ if [ "$POST" = true ]; then
 fi
 if [ "$GET" = true ]; then
     test_get
+	test_get_all
 fi
 if [ "$UPDATE" = true ]; then
     test_update

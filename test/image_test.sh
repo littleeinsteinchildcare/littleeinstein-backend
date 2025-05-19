@@ -8,7 +8,8 @@ DELETE=false
 VERBOSE=false
 THOROUGH=false
 CLEANUP=false
-NUM_TESTS=1
+# NUM_TESTS=1
+NUM_IMAGES=4
 
 # Color codes
 R='\033[0;31m'
@@ -26,7 +27,7 @@ NC='\033[0m' # No Color (reset)
 while getopts "n:pgudtcvh" opt; do
     case "$opt" in
         c) CLEANUP=true ;;
-        n) NUM_TESTS="$OPTARG" ;;
+        # n) NUM_TESTS="$OPTARG" ;;
         p) POST=true ;;
         g) GET=true ;;
         u) UPDATE=true ;;
@@ -45,7 +46,7 @@ show_help() {
     echo "Usage: $0 -[pgudvh]"
     echo
     echo "Options:"
-    echo "  -n <Num Tests>  Specify the Number of requests to make"
+    # echo "  -n <Num Tests>  Specify the Number of requests to make"
     echo "  -p              POST request testing"
     echo "  -g              GET request testing"
     echo "  -u              UPDATE request testing"
@@ -73,52 +74,64 @@ CURL_CMD=""
 test_post(){
  	echo  "$(yellow "Running POST 201 (Created) test...")"
 
-	for (( i = 1; i <("$NUM_TESTS"+1); i++)); do
-        inv1=$((i+1))
-        inv2=$((i+2))
-		ENDPOINT="/events"
+	for (( i = 1; i <("$NUM_IMAGES"+1); i++)); do
+		ENDPOINT="/images"
 		CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' -X POST \
-		-H 'Content-Type: application/json' \
         -H 'X-User-ID: $i' \
-		-d '{\"eventname\":\"Event $i\", \"date\":\"1/$i/2025\",\"id\":\"$i\", \"starttime\":\"$i:00am\",\"endtime\":\"$i:00pm\", \"invitees\":\"$inv1, $inv2\"}' \
+		-F 'image=@LEC_img$i.jpg' \
         $BASE_URL$ENDPOINT"
-		run_test "POST test <Create New Entity: Event $i>" 201
+		run_test "POST test <Upload New Image: LEC_img$i.jpg>" 201 #TODO - Consider switching Status Code
+	
 	done
 }
 
 test_post_failure_bad_request(){
  	echo  "$(yellow "Running POST 400 (Bad Request) test...")"
 
-	for (( i = 1; i <("$NUM_TESTS"+1); i++)); do
-        inv1=$((i+1))
-        inv2=$((i+2))
-		ENDPOINT="/events"
+	# for (( i = 1; i <("$NUM_TESTS"+1); i++)); do
+    #     inv1=$((i+1))
+    #     inv2=$((i+2))
+	# 	ENDPOINT="/events"
+	# 	CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' -X POST \
+	# 	-H 'Content-Type: application/json' \
+    #     -H 'X-User-ID: $i' \
+	# 	-d '{\"eventname\":\"Event $i\", \"date\":\"1/$i/2025\",\"id\":\"$i\", \"starttime\":\"$i:00am\",\"endtime\":\"$i:00pm\", \"invitees\":\"$inv1, $inv2\",}' \
+    #     $BASE_URL$ENDPOINT"
+	# 	run_test "POST test <Bad Request: User $i>" 400
+	# done
+
+
+	for (( i = 1; i <("$NUM_IMAGES"+1); i++)); do
+		ENDPOINT="/images"
 		CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' -X POST \
-		-H 'Content-Type: application/json' \
-        -H 'X-User-ID: $i' \
-		-d '{\"eventname\":\"Event $i\", \"date\":\"1/$i/2025\",\"id\":\"$i\", \"starttime\":\"$i:00am\",\"endtime\":\"$i:00pm\", \"invitees\":\"$inv1, $inv2\",}' \
+        -H 'X-User-Id: $i' \
+		-F 'image=@LEC_img$i.jpg' \
         $BASE_URL$ENDPOINT"
-		run_test "POST test <Bad Request: Event $i>" 400
-	done
+		run_test "POST test <Upload New Image: LEC_img$i.jpg>" 201 #TODO - Consider switching Status Code
 	
-}
-
-test_post_failure_entity_already_exists(){
- 	echo  "$(yellow "Running POST 409 (Entity Exists) test...")"
-
-	for (( i = 1; i <("$NUM_TESTS"+1); i++)); do
-        inv1=$((i+1))
-        inv2=$((i+2))
-		ENDPOINT="/events"
-		CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' -X POST \
-		-H 'Content-Type: application/json' \
-        -H 'X-User-ID: $i' \
-		-d '{\"eventname\":\"Event $i\", \"date\":\"1/$i/2025\",\"id\":\"$i\", \"starttime\":\"$i:00am\",\"endtime\":\"$i:00pm\", \"invitees\":\"$inv1, $inv2\"}' \
-        $BASE_URL$ENDPOINT"
-
-		run_test "POST test <Entity Already Exists: Event $i>" 409
 	done
+
+
+
+
 }
+
+# test_post_failure_entity_already_exists(){
+#  	echo  "$(yellow "Running POST 409 (Entity Exists) test...")"
+
+# 	for (( i = 1; i <("$NUM_TESTS"+1); i++)); do
+#         inv1=$((i+1))
+#         inv2=$((i+2))
+# 		ENDPOINT="/events"
+# 		CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' -X POST \
+# 		-H 'Content-Type: application/json' \
+#         -H 'X-User-ID: $i' \
+# 		-d '{\"eventname\":\"Event $i\", \"date\":\"1/$i/2025\",\"id\":\"$i\", \"starttime\":\"$i:00am\",\"endtime\":\"$i:00pm\", \"invitees\":\"$inv1, $inv2\"}' \
+#         $BASE_URL$ENDPOINT"
+
+# 		run_test "POST test <Entity Already Exists: Event $i>" 409
+# 	done
+# }
 
 
 test_get(){
@@ -143,75 +156,21 @@ test_get_failure_entity_not_found(){
 }
 
 
-test_get_all(){
-	echo "$(yellow "Running GET (ALL) 200 (OK) test...")"
-
-    ENDPOINT="/events/all"
-    CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' $BASE_URL$ENDPOINT"
-    run_test "GET test <OK: Get All Events>" 200
-}
-
-
-test_update(){
-    echo "$(yellow "Running PUT 200 (OK) test...")"
-
-	for (( i = 1; i <("$NUM_TESTS"+1); i++)); do
-        inv1=$((i+3))
-        inv2=$((i+4))
-		ENDPOINT="/events/$i"
-		CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}'  -X PUT \
-		-H 'Content-Type: application/json' \
-    	-d '{\"eventname\":\"UPDATED Event $i\", \"date\":\"9/$i/1991\",\"id\":\"$i\", \"starttime\":\"$i:30am\",\"endtime\":\"$i:30pm\", \"invitees\":\"$inv1, $inv2\"}' \
-        $BASE_URL$ENDPOINT"
-		run_test "PUT test <OK: Event $i>" 200
-	done
-	
-}
-
-test_update_failure_bad_request(){
-    echo "$(yellow "Running PUT 400 (Bad Request) test...")"
-
-	for (( i = 1; i <("$NUM_TESTS"+1); i++)); do
-        inv1=$((i+3))
-        inv2=$((i+4))
-		ENDPOINT="/events/$i"
-		CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}'  -X PUT \
-		-H 'Content-Type: application/json' \
-    	-d '{\"eventname\":\"Event $i\", \"date\":\"1/$i/2025\",\"id\":\"$i\", \"starttime\":\"$i:00am\",\"endtime\":\"$i:00pm\", \"invitees\":\"$inv1, $inv2\",}' \
-        $BASE_URL$ENDPOINT"
-		run_test "PUT test <Bad Request: Event $i>" 400
-	done
-	
-}
-
-
-test_update_failure_entity_not_found(){
-    echo "$(yellow "Running PUT 409 (Entity Not Found) test...")"
-
-	for (( i = 1; i <("$NUM_TESTS"+1); i++)); do
-        inv1=$((i+3))
-        inv2=$((i+4))
-		ENDPOINT="/events/$i"
-		CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}'  -X PUT \
-		-H 'Content-Type: application/json' \
-    	-d '{\"eventname\":\"Event $i\", \"date\":\"1/$i/2025\",\"id\":\"$i\", \"starttime\":\"$i:00am\",\"endtime\":\"$i:00pm\", \"invitees\":\"$inv1, $inv2\"}' \
-        $BASE_URL$ENDPOINT"
-		run_test "PUT test <Entity Not Found: Event $i>" 404
-	done
-	
-}
-
-
 test_delete(){
  	echo  "$(yellow "Running DELETE 204 (No Content) test...")"
 
-	for (( i = 1; i <("$NUM_TESTS"+1); i++)); do
-		ENDPOINT="/events/$i"
+	for (( i = 1; i <("$NUM_IMAGES"+1); i++)); do
+		ENDPOINT="/images/$i"
 		CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' -X DELETE \
-		-H 'Content-Type: application/json' \
-        $BASE_URL$ENDPOINT"
-		run_test "DELETE test <No Content: Event $i>" 204
-    done
+        -H 'X-User-ID: $i' \
+		-F 'image=@LEC_img$i.jpg' \
+        $BASE_URL$ENDPOINT/LEC_img$i.jpg"
+		run_test "POST test <Delete Image: LEC_img$i.jpg>" 200
+	done
+
+
+
+
 }
 
 
@@ -224,7 +183,7 @@ test_delete_failure_entity_not_found(){
 		-H 'Content-Type: application/json' \
         $BASE_URL$ENDPOINT"
 
-		run_test "DELETE test <Entity Not Found: Event $i>" 404
+		run_test "DELETE test <Entity Not Found: User $i>" 404
 	done	
 }
 
@@ -281,6 +240,9 @@ create_users(){
 delete_users(){
  	echo  "$(yellow "Running DELETE 204 (No Content) test...")"
 
+	# CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' -X DELETE $BASE_URL/users/1"
+	# run_test "<No Content: User $1>" 204
+
 	for (( i = 1; i <("$NUM_TESTS"+5); i++)); do
 		ENDPOINT="/users/$i"
 		CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' -X DELETE $BASE_URL$ENDPOINT"
@@ -299,8 +261,7 @@ setup(){
 	echo -e "${B}Ensure that azurite is running inside the tmp/ directory: ${Y}cd tmp/ && azurite${NC}"
  
     # CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' http://localhost:8080/users/111"
-    CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' -I http://localhost:8080" 
-    
+    CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' -I http://localhost:8080"
     response=$(eval "$CURL_CMD")
 	status=$(echo $response | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
 
@@ -327,15 +288,11 @@ if [ "$POST" = true ]; then
     test_post
     if [ "$THOROUGH" = true ]; then
         test_post_failure_bad_request
-        test_post_failure_entity_already_exists
+        # test_post_failure_entity_already_exists
     fi
 fi
 if [ "$GET" = true ]; then
     test_get
-    test_get_all
-fi
-if [ "$UPDATE" = true ]; then
-    test_update
 fi
 if [ "$DELETE" = true ]; then
     test_delete
@@ -348,12 +305,6 @@ fi
 if [ "$THOROUGH" = true ]; then
     if [[ "$GET" = true && "$DELETE" = true ]]; then
         test_get_failure_entity_not_found
-    fi
-    if [ "$UPDATE" = true ]; then
-        test_update_failure_bad_request
-        if [ "$DELETE" = true ]; then
-            test_update_failure_entity_not_found
-        fi
     fi
 fi
 if [ "$CLEANUP" = true ]; then
