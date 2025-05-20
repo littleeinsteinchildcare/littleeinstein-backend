@@ -41,7 +41,8 @@ These values are configured to work with the local Azurite emulator (Azure Stora
 
 ## Docker Compose Setup
 
-Our Docker Compose configuration sets up two services that work together:
+```docker-compose.yml``` container orchestration file which lets us define, configure and run multiple containers together
+ Our Docker Compose configuration sets up two services that work together:
 
 1. **backend**: Your Go API application
     * Runs on port 8080
