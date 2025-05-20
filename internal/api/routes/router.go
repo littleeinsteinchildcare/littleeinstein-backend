@@ -43,11 +43,13 @@ func SetupRouter() *http.ServeMux {
 		log.Fatalf("Router.SetupRouter: Failed to create event repository: %v", err)
 	}
 
-
 	blobConfig, err := config.LoadBlobConfig()
 	blobRepo, err := repositories.NewBlobStorageService(blobConfig.AzureAccountName, blobConfig.AzureAccountKey, blobConfig.AzureContainerName)
 	if err != nil {
-		fmt.Printf("ERROR CREATING BLOB SERVICE: %v", err)
+		fmt.Printf("ERROR CREATING BLOB SERVICE: %v\n", err)
+		fmt.Printf("ACCOUNT NAME: %s\n", blobConfig.AzureAccountName)
+		fmt.Printf("ACCOUNT KEY: %s\n", blobConfig.AzureAccountKey)
+		fmt.Printf("ACCOUNT KEY: %s\n", blobConfig.AzureContainerName)
 	}
 	blobService := services.NewBlobService(blobRepo)
 	// Create user service with repository dependency
@@ -71,7 +73,6 @@ func SetupRouter() *http.ServeMux {
 
 	// Register all event-related routes (create, get, update, delete)
 	RegisterEventRoutes(router, eventHandler)
-
 
 	// statService := services.StatisticsService{}
 	statService := services.NewStatisticsService(handlers.MaxUploadSize)

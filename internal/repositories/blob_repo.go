@@ -33,11 +33,16 @@ func NewBlobStorageService(accountName, accountKey, containerName string) (*Blob
 
 	// From the Azure portal, get your storage account blob service URL endpoint.
 	var containerURLStr string
+	fmt.Printf("CHECKING APP ENV\n")
 	switch os.Getenv("APP_ENV") {
 	case "production":
+
+		fmt.Printf("PRODUCTION\n")
 		containerURLStr = fmt.Sprintf("https://%s.blob.core.windows.net/%s", accountName, containerName)
 	case "development":
-		containerURLStr = fmt.Sprintf("http://127.0.0.1:10000/%s/%s", accountName, containerName)
+		fmt.Printf("DEVELOPMENT\n")
+		// containerURLStr = fmt.Sprintf("http://127.0.0.1:10000/%s/%s", accountName, containerName)
+		containerURLStr = fmt.Sprintf("http://host.docker.internal:10000/%s/%s", accountName, containerName)
 	}
 
 	URL, _ := url.Parse(containerURLStr)
