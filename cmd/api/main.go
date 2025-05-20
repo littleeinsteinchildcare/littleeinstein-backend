@@ -21,7 +21,7 @@ func main() {
 			log.Println("Error loading .env file:", err)
 		}
 	} else {
-		log.Println("No .env file found, using environment variables directly")
+		log.Println("No .env file found, assuming environment variables already set")
 	}
 	fmt.Println("Starting API Server...")
 
