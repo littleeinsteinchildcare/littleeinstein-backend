@@ -41,7 +41,8 @@ These values are configured to work with the local Azurite emulator (Azure Stora
 
 ## Docker Compose Setup
 
-```docker-compose.yml``` container orchestration file which lets us define, configure and run multiple containers together
+ A YAML file that defines and manages a multi-container Docker application. It specifies how your application's services, networks, and volumes should be configured and how they should interact with each other
+ 
  Our Docker Compose configuration sets up two services that work together:
 
 1. **backend**: Your Go API application
