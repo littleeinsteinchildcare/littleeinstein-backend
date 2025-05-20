@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"littleeinsteinchildcare/backend/internal/api/middleware"
 	"littleeinsteinchildcare/backend/internal/api/routes"
@@ -13,9 +14,14 @@ import (
 )
 
 func main() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatalf("Unable to find .env file")
+	// Check if .env file exists before trying to load it
+	if _, err := os.Stat(".env"); err == nil {
+		// File exists, so load it
+		if err := godotenv.Load(); err != nil {
+			log.Println("Error loading .env file:", err)
+		}
+	} else {
+		log.Println("No .env file found, using environment variables directly")
 	}
 	fmt.Println("Starting API Server...")
 
