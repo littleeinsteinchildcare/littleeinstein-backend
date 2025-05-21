@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/joho/godotenv"
 	"log"
 	"net/http"
 	"os"
@@ -12,16 +13,22 @@ import (
 )
 
 func main() {
-	//Environment setup
+	//----Environment setup------
 
+	// Load .env file, ignoring any errors
+	_ = godotenv.Load()
+
+	// Check APP_ENV after potentially loading it from .env
 	fmt.Print("App Environment Configuration: ")
 	switch environment := os.Getenv("APP_ENV"); environment {
 	case "production":
 		fmt.Println("Production")
 	case "development":
 		fmt.Println("Development")
+	case "legacy":
+		fmt.Println("Legacy")
 	default:
-		log.Fatal("Error: APP_ENV must be set to either production or development")
+		log.Fatal("Error: APP_ENV must be set to either production, development, or legacy")
 	}
 
 	fmt.Println("Note: Variables must be configured properly prior to execution")
