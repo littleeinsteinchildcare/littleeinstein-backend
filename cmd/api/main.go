@@ -40,6 +40,8 @@ func main() {
 	// Set up router with all routes
 	router := routes.SetupRouter()
 
+	//TODO: Wrap router in Auth middleware
+
 	// Wrap with CORS
 	corsHandler := middleware.CorsMiddleware(router)
 
