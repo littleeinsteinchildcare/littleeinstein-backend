@@ -9,21 +9,23 @@ import (
 	"littleeinsteinchildcare/backend/internal/api/middleware"
 	"littleeinsteinchildcare/backend/internal/api/routes"
 	"littleeinsteinchildcare/backend/internal/config"
-
-	"github.com/joho/godotenv"
 )
 
 func main() {
-	// Check if .env file exists before trying to load it
-	if _, err := os.Stat(".env"); err == nil {
-		// File exists, so load it
-		if err := godotenv.Load(); err != nil {
-			log.Println("Error loading .env file:", err)
-		}
-	} else {
-		log.Println("No .env file found, assuming environment variables already set")
+	//Environment setup
+
+	fmt.Print("App Environment Configuration: ")
+	switch environment := os.Getenv("APP_ENV"); environment {
+	case "production":
+		fmt.Println("Production")
+	case "development":
+		fmt.Println("Development")
+	default:
+		log.Fatal("Error: APP_ENV must be set to either production or development")
 	}
-	fmt.Println("Starting API Server...")
+
+	fmt.Println("Note: Variables must be configured properly prior to execution")
+	fmt.Println("Starting API server...")
 
 	// Load configuration
 	cfg := config.LoadServerConfig()
