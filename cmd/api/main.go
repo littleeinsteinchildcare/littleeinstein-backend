@@ -2,28 +2,45 @@ package main
 
 import (
 	"fmt"
+	"github.com/joho/godotenv"
 	"log"
 	"net/http"
+	"os"
 
 	"littleeinsteinchildcare/backend/internal/api/middleware"
 	"littleeinsteinchildcare/backend/internal/api/routes"
 	"littleeinsteinchildcare/backend/internal/config"
-
-	"github.com/joho/godotenv"
 )
 
 func main() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatalf("Unable to find .env file")
+	//----Environment setup------
+
+	// Load .env file, ignoring any errors
+	_ = godotenv.Load()
+
+	// Check APP_ENV after potentially loading it from .env
+	fmt.Print("App Environment Configuration: ")
+	switch environment := os.Getenv("APP_ENV"); environment {
+	case "production":
+		fmt.Println("Production")
+	case "development":
+		fmt.Println("Development")
+	case "legacy":
+		fmt.Println("Legacy")
+	default:
+		log.Fatal("Error: APP_ENV must be set to either production, development, or legacy")
 	}
-	fmt.Println("Starting API Server...")
+
+	fmt.Println("Note: Variables must be configured properly prior to execution")
+	fmt.Println("Starting API server...")
 
 	// Load configuration
 	cfg := config.LoadServerConfig()
 
 	// Set up router with all routes
 	router := routes.SetupRouter()
+
+	//TODO: Wrap router in Auth middleware
 
 	// Wrap with CORS
 	corsHandler := middleware.CorsMiddleware(router)

@@ -1,0 +1,38 @@
+# Workflow name - This appears in the GitHub Actions UI
+name: Build and Push to ACR
+
+# Define when this workflow will run
+on:
+  push:
+    branches: [ main ]  # Triggers automatically when code is pushed to main branch
+  workflow_dispatch:    # Allows manual execution of this workflow from the GitHub UI
+
+# Jobs to run as part of this workflow
+jobs:
+  build-and-push:       # Job ID - used internally by GitHub Actions
+    runs-on: ubuntu-latest  # This job will run on the latest Ubuntu GitHub-hosted runner
+
+    steps:
+      # Step 1: Get the repository code into the runner's filesystem
+      - name: Checkout repository
+        uses: actions/checkout@v3  # Official GitHub action to checkout repository code
+
+      # Step 2: Authenticate with Azure Container Registry
+      - name: Login to Azure Container Registry
+        uses: azure/docker-login@v1  # Microsoft-provided action for Docker login to ACR
+        with:
+          # These values are pulled from secrets stored in the GitHub repository settings
+          login-server: ${{ secrets.ACR_NAME }}.azurecr.io  # ACR URL constructed from secret
+          username: ${{ secrets.ACR_USERNAME }}  # Service principal ID or admin username
+          password: ${{ secrets.ACR_PASSWORD }}  # Service principal password or admin password
+
+      # Step 3: Build a Docker image from the repository and push it to ACR
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4  # Community action for building and pushing Docker images
+        with:
+          context: .  # Build context is the current directory (root of repository)
+          push: true  # Ensures the image is pushed to the registry after building
+          # Tag format: registry-url/image-name:version
+          # Using git commit SHA as the version ensures unique identifiers for each build
+          tags: ${{ secrets.ACR_NAME }}.azurecr.io/kindergarten-site:${{ github.sha }}
+          # Note: This assumes a Dockerfile exists in the repository root

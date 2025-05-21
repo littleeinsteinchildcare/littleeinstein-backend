@@ -15,3 +15,4 @@ func RegisterEventRoutes(router *http.ServeMux, eventHandler *handlers.EventHand
 	router.HandleFunc("POST /api/event", eventHandler.CreateEvent)
 	router.HandleFunc("PUT /api/event/{id}", eventHandler.UpdateEvent)
 
+}
