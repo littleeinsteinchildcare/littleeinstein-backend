@@ -1,0 +1,50 @@
+# No version directive needed in newer Docker Compose versions
+
+services:
+  # Your Go API service definition
+  backend:
+    build:  # Build from Dockerfile in current directory
+      context: .
+      dockerfile: Dockerfile
+    # Port mapping configuration
+    ports:
+      - "8080:8080"  # HOST_PORT:CONTAINER_PORT
+      # This creates a connection between your computer and the container:
+      # - When a request comes to port 8080 on your computer (host)
+      # - Docker forwards it to port 8080 inside the container
+      # - Your Go API inside the container receives the request
+      # - Think of it like mail forwarding between two addresses
+      # - External apps/browsers use http://localhost:8080 to access your API
+      # - The container has its own isolated network with its own port 8080
+    env_file:
+      - .env  # Load environment variables from .env file
+    extra_hosts:
+      - "host.docker.internal:host-gateway"  # Makes host machine accessible from container
+    depends_on:
+      - azurite  # Ensures Azurite starts before backend
+    environment:
+      - APP_ENV=development  # Set environment variable directly
+    networks:
+      - littleeinstein-network  # Connect to defined network
+
+  # Azure Storage Emulator
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite
+    ports:
+      - "10000:10000"  # Blob service
+      - "10001:10001"  # Queue service
+      - "10002:10002"  # Table service
+    volumes:
+      - azurite-data:/data
+    networks:
+      - littleeinstein-network
+
+# Define networks section that was missing
+networks:
+  littleeinstein-network:
+    driver: bridge
+
+# Define volumes section for Azurite data persistence
+volumes:
+  azurite-data:
+  # This persists Azure storage data between container restarts
