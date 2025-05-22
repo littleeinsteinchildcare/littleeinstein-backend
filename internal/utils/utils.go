@@ -42,3 +42,10 @@ func GetUserIDFromAuth(r *http.Request) (string, error) {
 	return userID, nil
 }
 
+func RespondUnauthorized(w http.ResponseWriter, message string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusUnauthorized)
+	_ = json.NewEncoder(w).Encode(map[string]string{
+		"error": message,
+	})
+}
