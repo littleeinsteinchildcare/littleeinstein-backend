@@ -94,6 +94,33 @@ func (s *EventService) GetAllEvents() ([]models.Event, error) {
 	return events, nil
 }
 
+// GetEventsByUser returns events where the user is either creator or invitee
+func (s *EventService) GetEventsByUser(userId string) ([]models.Event, error) {
+	allEvents, err := s.GetAllEvents()
+	if err != nil {
+		return []models.Event{}, err
+	}
+	
+	var userEvents []models.Event
+	for _, event := range allEvents {
+		// Check if user is creator
+		if event.Creator.ID == userId {
+			userEvents = append(userEvents, event)
+			continue
+		}
+		
+		// Check if user is in invitees
+		for _, invitee := range event.Invitees {
+			if invitee.ID == userId {
+				userEvents = append(userEvents, event)
+				break
+			}
+		}
+	}
+	
+	return userEvents, nil
+}
+
 // CreateEvent returns an error on a failed EventRepo call
 func (s *EventService) CreateEvent(event models.Event) error {
 	err := s.repo.CreateEvent(EVENTSTABLE, event)

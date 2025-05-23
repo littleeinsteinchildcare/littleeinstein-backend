@@ -11,6 +11,7 @@ func RegisterEventRoutes(router *http.ServeMux, eventHandler *handlers.EventHand
 	// User routes using Go 1.22+ path pattern syntax
 	router.HandleFunc("GET /api/event/{id}", eventHandler.GetEvent)
 	router.HandleFunc("GET /api/events", eventHandler.GetAllEvents)
+	router.HandleFunc("GET /api/events/user/{userId}", eventHandler.GetEventsByUser)
 	router.HandleFunc("DELETE /api/event/{id}", eventHandler.DeleteEvent)
 	router.HandleFunc("POST /api/event", eventHandler.CreateEvent)
 	router.HandleFunc("PUT /api/event/{id}", eventHandler.UpdateEvent)

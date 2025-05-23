@@ -15,6 +15,7 @@ type EventService interface {
 	CreateEvent(user models.Event) error
 	GetEventByID(id string) (models.Event, error)
 	GetAllEvents() ([]models.Event, error)
+	GetEventsByUser(userId string) ([]models.Event, error)
 	DeleteEventByID(id string) error
 	UpdateEvent(newData models.Event) (models.Event, error)
 }
@@ -66,6 +67,27 @@ func (h *EventHandler) GetAllEvents(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(responses)
 
+}
+
+// Return events where user is creator or invitee
+func (h *EventHandler) GetEventsByUser(w http.ResponseWriter, r *http.Request) {
+	userId := r.PathValue("userId")
+	
+	events, err := h.eventService.GetEventsByUser(userId)
+	if err != nil {
+		utils.WriteJSONError(w, http.StatusNotFound, fmt.Sprintf("EventHandler.GetEventsByUser: Failed to retrieve events for user %s", userId), err)
+		return
+	}
+	
+	var responses []map[string]interface{}
+	for _, event := range events {
+		resp := buildEventResponse(event)
+		responses = append(responses, resp)
+	}
+	
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(responses)
 }
 
 // CreateEvent handles POST requests to create a new user
