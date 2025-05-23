@@ -10,6 +10,8 @@ import (
 	"littleeinsteinchildcare/backend/internal/api/middleware"
 	"littleeinsteinchildcare/backend/internal/api/routes"
 	"littleeinsteinchildcare/backend/internal/config"
+
+	"littleeinsteinchildcare/backend/firebase"
 )
 
 func main() {
@@ -30,20 +32,20 @@ func main() {
 	default:
 		log.Fatal("Error: APP_ENV must be set to either production, development, or legacy")
 	}
-
 	fmt.Println("Note: Variables must be configured properly prior to execution")
 	fmt.Println("Starting API server...")
-
+	firebase.Init();
 	// Load configuration
 	cfg := config.LoadServerConfig()
 
 	// Set up router with all routes
 	router := routes.SetupRouter()
 
+	protectedRouter := middleware.FirebaseAuthMiddleware(router)
 	//TODO: Wrap router in Auth middleware
 
 	// Wrap with CORS
-	corsHandler := middleware.CorsMiddleware(router)
+	corsHandler := middleware.CorsMiddleware(protectedRouter)
 
 	// Server configuration with security timeouts
 	server := http.Server{
