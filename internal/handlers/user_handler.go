@@ -143,6 +143,66 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
+// SyncFirebaseUser handles POST requests to sync Firebase users with backend database
+func (h *UserHandler) SyncFirebaseUser(w http.ResponseWriter, r *http.Request) {
+	userData, err := utils.DecodeJSONRequest(r)
+	if err != nil {
+		utils.WriteJSONError(w, http.StatusBadRequest, "UserHandler.SyncFirebaseUser: Failed to decode JSON request", err)
+		return
+	}
+
+	// Extract Firebase user data
+	uid, ok := userData["uid"].(string)
+	if !ok {
+		utils.WriteJSONError(w, http.StatusBadRequest, "UserHandler.SyncFirebaseUser: Missing or invalid uid", nil)
+		return
+	}
+
+	email, ok := userData["email"].(string)
+	if !ok {
+		utils.WriteJSONError(w, http.StatusBadRequest, "UserHandler.SyncFirebaseUser: Missing or invalid email", nil)
+		return
+	}
+
+	name, ok := userData["name"].(string)
+	if !ok {
+		name = userData["displayName"].(string) // Fallback to displayName
+		if name == "" {
+			name = "User" // Default name
+		}
+	}
+
+	// Check if user already exists
+	existingUser, err := h.userService.GetUserByID(uid)
+	if err == nil {
+		// User exists, return existing user
+		response := buildUserResponse(existingUser)
+		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	// User doesn't exist, create new user
+	user := models.User{
+		ID:    uid,
+		Name:  name,
+		Email: email,
+		Role:  "parent", // Default role for Firebase users
+	}
+
+	err = h.userService.CreateUser(user)
+	if err != nil {
+		utils.WriteJSONError(w, http.StatusConflict, "UserHandler.SyncFirebaseUser: Failed to create user", err)
+		return
+	}
+
+	response := buildUserResponse(user)
+	w.WriteHeader(http.StatusCreated)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
 // Helper - build response object from User data
 func buildUserResponse(user models.User) map[string]interface{} {
 	response := map[string]interface{}{

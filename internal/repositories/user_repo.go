@@ -7,6 +7,7 @@ import (
 	"littleeinsteinchildcare/backend/internal/config"
 	"littleeinsteinchildcare/backend/internal/models"
 	"littleeinsteinchildcare/backend/internal/services"
+	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/data/aztables"
 )
@@ -81,6 +82,12 @@ func (repo *UserRepository) GetAllUsers(tableName string) ([]models.User, error)
 	for pager.More() {
 		response, err := pager.NextPage(ctx)
 		if err != nil {
+			// If table doesn't exist, return empty array instead of error
+			// Azure returns "TableNotFound" error code when table doesn't exist
+			errMsg := err.Error()
+			if strings.Contains(errMsg, "TableNotFound") {
+				return []models.User{}, nil
+			}
 			return []models.User{}, fmt.Errorf("UserRepository.GetAllUsers: Failed to acquire next page: %w", err)
 		}
 		pageCount += 1

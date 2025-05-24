@@ -56,7 +56,8 @@ func (h *EventHandler) GetEvent(w http.ResponseWriter, r *http.Request) {
 func (h *EventHandler) GetAllEvents(w http.ResponseWriter, r *http.Request) {
 	events, err := h.eventService.GetAllEvents()
 	if err != nil {
-		utils.WriteJSONError(w, http.StatusNotFound, fmt.Sprintf("EventHandler.GetAllEvents: Failed to retrieve list of users"), err)
+		utils.WriteJSONError(w, http.StatusInternalServerError, fmt.Sprintf("EventHandler.GetAllEvents: Failed to retrieve list of events"), err)
+		return
 	}
 	var responses []map[string]interface{}
 

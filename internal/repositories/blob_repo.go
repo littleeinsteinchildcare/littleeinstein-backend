@@ -41,8 +41,12 @@ func NewBlobStorageService(accountName, accountKey, containerName string) (*Blob
 		containerURLStr = fmt.Sprintf("https://%s.blob.core.windows.net/%s", accountName, containerName)
 	case "development":
 		//fmt.Printf("DEVELOPMENT\n")
-		// containerURLStr = fmt.Sprintf("http://127.0.0.1:10000/%s/%s", accountName, containerName)
-		containerURLStr = fmt.Sprintf("http://host.docker.internal:10000/%s/%s", accountName, containerName)
+		// Use environment variable if set, otherwise default to localhost
+		blobServiceURL := os.Getenv("AZURE_BLOB_SERVICE_URL")
+		if blobServiceURL == "" {
+			blobServiceURL = "http://127.0.0.1:10000"
+		}
+		containerURLStr = fmt.Sprintf("%s/%s/%s", blobServiceURL, accountName, containerName)
 	}
 
 	URL, _ := url.Parse(containerURLStr)

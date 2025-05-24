@@ -114,6 +114,12 @@ func (repo *EventRepository) GetAllEvents(tableName string) ([]models.EventEntit
 	for pager.More() {
 		response, err := pager.NextPage(context.Background())
 		if err != nil {
+			// If table doesn't exist, return empty array instead of error
+			// Azure returns "TableNotFound" error code when table doesn't exist
+			errMsg := err.Error()
+			if strings.Contains(errMsg, "TableNotFound") {
+				return []models.EventEntity{}, nil
+			}
 			return nil, fmt.Errorf("EventRepo.GetAllEvents: Failed to acquire next page: %w", err)
 		}
 		pageCount += 1
