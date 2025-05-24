@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"littleeinsteinchildcare/backend/internal/models"
 	"littleeinsteinchildcare/backend/internal/utils"
 	"net/http"
 	"strings"
-	"littleeinsteinchildcare/backend/internal/api/middleware"
 )
 
 // EventService interface implemented in services package
@@ -101,17 +101,34 @@ func (h *EventHandler) CreateEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	creatorID, err := utils.GetUserIDFromAuth(r)
+	if err != nil {
+		utils.WriteJSONError(w, http.StatusUnauthorized, fmt.Sprintf("EventHandler.CreateEvent: Failed to get user ID from auth: %v", err), err)
+		return
+	}
+	log.Printf("DEBUG: Got creator ID from auth: %s", creatorID)
+	
 	// creator, err := h.userService.GetUserByID(eventData["creator"].(string))
+	log.Printf("DEBUG: About to call userService.GetUserByID with ID: '%s'", creatorID)
 	creator, err := h.userService.GetUserByID(creatorID)
 	if err != nil {
+		log.Printf("DEBUG: userService.GetUserByID failed with error: %v", err)
 		utils.WriteJSONError(w, http.StatusNotFound, fmt.Sprintf("EventHandler.CreateEvent: Failed to find Creator with ID %s:", creatorID), err)
 		return
 	}
-	invitee_ids := strings.Split(eventData["invitees"].(string), ",")
+	log.Printf("DEBUG: Successfully retrieved creator: %+v", creator)
+	inviteesStr := eventData["invitees"].(string)
+	log.Printf("DEBUG: Processing invitees string: '%s'", inviteesStr)
+	invitee_ids := strings.Split(inviteesStr, ",")
+	log.Printf("DEBUG: Split invitee IDs: %+v", invitee_ids)
 	var invitees_list []models.User
 
 	for _, id := range invitee_ids {
 		id = strings.TrimSpace(id)
+		log.Printf("DEBUG: Processing invitee ID: '%s'", id)
+		if id == "" {
+			log.Printf("DEBUG: Skipping empty invitee ID")
+			continue
+		}
 		user, err := h.userService.GetUserByID(id)
 		if err != nil {
 			utils.WriteJSONError(w, http.StatusNotFound, fmt.Sprintf("EventHandler.CreateEvent: Failed to find User with ID %s", id), err)
@@ -253,13 +270,13 @@ func buildEventResponse(event models.Event) map[string]interface{} {
 }
 
 func (h *EventHandler) TestConnection(w http.ResponseWriter, r *http.Request) {
-	uid, ok := r.Context().Value(middleware.ContextUID).(string)
+	uid, ok := r.Context().Value(utils.ContextUID).(string)
 	if !ok {
 		http.Error(w, "UID missing in context", http.StatusInternalServerError)
 		return
 	}
 
-	email, _ := r.Context().Value(middleware.ContextEmail).(string)
+	email, _ := r.Context().Value(utils.ContextEmail).(string)
 
 	response := map[string]interface{}{
 		"status": "authenticated",

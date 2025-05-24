@@ -69,14 +69,23 @@ func (s *EventService) GetAllEvents() ([]models.Event, error) {
 			return nil, fmt.Errorf("Failed to get Creator %s: %w", r.CreatorID, err)
 		}
 
-		invitee_ids := strings.Split(r.InviteeIDs, ",")
-		invitees := make([]models.User, 0, len(invitee_ids))
-		for _, id := range invitee_ids {
-			u, err := getUser(id)
-			if err != nil {
-				return nil, fmt.Errorf("Failed to get invitee %s: %w", id, err)
+		var invitees []models.User
+		if r.InviteeIDs != "" {
+			invitee_ids := strings.Split(r.InviteeIDs, ",")
+			invitees = make([]models.User, 0, len(invitee_ids))
+			for _, id := range invitee_ids {
+				id = strings.TrimSpace(id)
+				if id == "" {
+					continue // Skip empty IDs
+				}
+				u, err := getUser(id)
+				if err != nil {
+					return nil, fmt.Errorf("Failed to get invitee %s: %w", id, err)
+				}
+				invitees = append(invitees, u)
 			}
-			invitees = append(invitees, u)
+		} else {
+			invitees = []models.User{} // Empty array for no invitees
 		}
 
 		// Build list of all events in table

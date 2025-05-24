@@ -4,17 +4,17 @@ import (
 	"net/http"
 
 	"littleeinsteinchildcare/backend/internal/handlers"
+	"littleeinsteinchildcare/backend/internal/api/middleware"
 )
 
-// RegisterUserRoutes sets up all user-related routes
+// RegisterEventRoutes sets up all event-related routes with Firebase authentication
 func RegisterEventRoutes(router *http.ServeMux, eventHandler *handlers.EventHandler) {
-	// User routes using Go 1.22+ path pattern syntax
-	router.HandleFunc("GET /api/event/{id}", eventHandler.GetEvent)
-	router.HandleFunc("GET /api/events", eventHandler.GetAllEvents)
-	router.HandleFunc("GET /api/events/user/{userId}", eventHandler.GetEventsByUser)
-	router.HandleFunc("DELETE /api/event/{id}", eventHandler.DeleteEvent)
-	router.HandleFunc("POST /api/event", eventHandler.CreateEvent)
-	router.HandleFunc("PUT /api/event/{id}", eventHandler.UpdateEvent)
-	router.HandleFunc("GET /test", eventHandler.TestConnection)
-
+	// Event routes with Firebase authentication middleware
+	router.Handle("GET /api/event/{id}", middleware.FirebaseAuthMiddleware(http.HandlerFunc(eventHandler.GetEvent)))
+	router.Handle("GET /api/events", middleware.FirebaseAuthMiddleware(http.HandlerFunc(eventHandler.GetAllEvents)))
+	router.Handle("GET /api/events/user/{userId}", middleware.FirebaseAuthMiddleware(http.HandlerFunc(eventHandler.GetEventsByUser)))
+	router.Handle("DELETE /api/event/{id}", middleware.FirebaseAuthMiddleware(http.HandlerFunc(eventHandler.DeleteEvent)))
+	router.Handle("POST /api/event", middleware.FirebaseAuthMiddleware(http.HandlerFunc(eventHandler.CreateEvent)))
+	router.Handle("PUT /api/event/{id}", middleware.FirebaseAuthMiddleware(http.HandlerFunc(eventHandler.UpdateEvent)))
+	router.Handle("GET /test", middleware.FirebaseAuthMiddleware(http.HandlerFunc(eventHandler.TestConnection)))
 }

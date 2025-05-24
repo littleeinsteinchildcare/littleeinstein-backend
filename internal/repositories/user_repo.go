@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"littleeinsteinchildcare/backend/internal/config"
 	"littleeinsteinchildcare/backend/internal/models"
 	"littleeinsteinchildcare/backend/internal/services"
@@ -34,12 +35,15 @@ func NewUserRepo(cfg config.AzTableConfig) (services.UserRepo, error) {
 
 // GetUser retrieves and stores entity data in a User object
 func (repo *UserRepository) GetUser(tableName string, id string) (models.User, error) {
+	log.Printf("DEBUG: UserRepository.GetUser called with tableName: '%s', id: '%s'", tableName, id)
 
 	ctx := context.Background()
 	tableClient := repo.serviceClient.NewClient(tableName)
 
+	log.Printf("DEBUG: About to call tableClient.GetEntity with PartitionKey: '%s', RowKey: '%s'", PartitionKey, id)
 	resp, err := tableClient.GetEntity(ctx, PartitionKey, id, nil)
 	if err != nil {
+		log.Printf("DEBUG: tableClient.GetEntity failed: %v", err)
 		return models.User{}, fmt.Errorf("UserRepository.GetUser: Failed to retrieve entity from %s: %w", tableName, err)
 	}
 
