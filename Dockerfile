@@ -3,7 +3,7 @@
 # ========================================
 # Stage 1: Build Stage
 # ========================================
-FROM golang:1.24-alpine AS builder
+FROM golang:1.24.2-alpine AS builder
 # Using Alpine Linux with Go 1.24 preinstalled as the build environment
 # The "AS builder" names this stage so we can reference it later
 
