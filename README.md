@@ -366,4 +366,4 @@ go install github.com/cosmtrek/air@latest
 #### Running the project with Air:
 ```cd cmd/api && air```
 
-This will watch for file changes and automatically restart the application for a smoother development experience.
+This will watch for file changes and automatically restart the application for a smoother development experience..
