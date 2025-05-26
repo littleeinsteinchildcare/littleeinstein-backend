@@ -1,12 +1,17 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
+	"littleeinsteinchildcare/backend/firebase"
+	"littleeinsteinchildcare/backend/internal/api/middleware"
 	"littleeinsteinchildcare/backend/internal/models"
 	"littleeinsteinchildcare/backend/internal/utils"
 	"net/http"
+
+	"cloud.google.com/go/firestore"
 )
 
 // UserService interface implemented in services package
@@ -114,32 +119,87 @@ func (h *UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 
 // CreateUser handles POST requests to create a new user
 func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 
-	userData, err := utils.DecodeJSONRequest(r)
-	if err != nil {
-		utils.WriteJSONError(w, http.StatusBadRequest, "UserHandler.DecodeUserRequest: Failed to decode JSON request", err)
+	// Extract user info from middleware
+	uid, ok := utils.GetContextString(ctx, middleware.ContextUID)
+	if !ok {
+		http.Error(w, "Unauthorized: missing UID in context", http.StatusUnauthorized)
 		return
 	}
 
+	email, ok := utils.GetContextString(ctx, middleware.ContextEmail)
+	if !ok {
+		http.Error(w, "Unauthorized: missing Email in context", http.StatusUnauthorized)
+		return
+	}
+
+	authClient, err := firebase.Auth(ctx)
+	if err != nil {
+		http.Error(w, "Failed to initialize Firebase Auth client", http.StatusInternalServerError)
+		return
+	}
+
+	userRecord, err := authClient.GetUser(ctx, uid)
+	if err != nil {
+		http.Error(w, "Failed to fetch user info from Firebase", http.StatusInternalServerError)
+		return
+	}
+	fsClient, err := firebase.Firestore(ctx)
+	if err != nil {
+		http.Error(w, "Failed to initialize Firestore client", http.StatusInternalServerError)
+		return
+	}
+	defer fsClient.Close()
+
+	role := "user" // default
+	isAdmin := false
+
+	docSnap, err := fsClient.Collection("invitedUsers").Doc(email).Get(ctx)
+	if err == nil {
+		if val, ok := docSnap.Data()["admin"].(bool); ok && val {
+			role = "admin"
+			isAdmin = true
+		}
+	}
+
+	if isAdmin {
+		go func(email string) {
+			if err := firebase.SetAdminClaimForEmail(context.Background(), firebase.Init(), email); err != nil {
+				fmt.Printf("Failed to set admin claim for %s: %v\n", email, err)
+			}
+		}(email)
+
+	}
+	// Construct user model
 	user := models.User{
-		ID:    userData["id"].(string),
-		Name:  userData["username"].(string),
-		Email: userData["email"].(string),
-		Role:  userData["role"].(string),
+		ID:    uid,
+		Name:  userRecord.DisplayName,
+		Email: email,
+		Role:  role,
 	}
 
-	err = h.userService.CreateUser(user)
-
-	if err != nil {
-		utils.WriteJSONError(w, http.StatusConflict, "UserHandler.CreateUser: Failed to create User", err)
-
+	// Store user in DB
+	if err := h.userService.CreateUser(user); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusConflict)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error":   "UserHandler.CreateUser: Failed to create user",
+			"details": err.Error(),
+		})
 		return
 	}
+	_, err = fsClient.Collection("invitedUsers").Doc(email).Update(ctx, []firestore.Update{
+		{Path: "signedUp", Value: true},
+	})
+	if err != nil {
+		fmt.Printf("Warning: failed to update signedUp flag in Firestore: %v\n", err)
+	}
 
+	// On success
 	response := buildUserResponse(user)
-
-	w.WriteHeader(http.StatusCreated)
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(response)
 }
 
