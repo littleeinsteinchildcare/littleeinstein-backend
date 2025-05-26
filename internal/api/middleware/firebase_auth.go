@@ -15,6 +15,7 @@ const (
 	ContextUID   contextKey = "uid"
 	ContextEmail contextKey = "email"
 )
+
 func FirebaseAuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		authHeader := r.Header.Get("Authorization")
@@ -39,7 +40,7 @@ func FirebaseAuthMiddleware(next http.Handler) http.Handler {
 
 		ctx := context.WithValue(r.Context(), ContextUID, token.UID)
 		if email, ok := token.Claims["email"].(string); ok {
-		ctx = context.WithValue(ctx, ContextEmail, email)
+			ctx = context.WithValue(ctx, ContextEmail, email)
 		}
 		next.ServeHTTP(w, r.WithContext(ctx))
 

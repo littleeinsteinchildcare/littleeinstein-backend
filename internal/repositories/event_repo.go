@@ -242,6 +242,10 @@ func (repo *EventRepository) DeleteEvent(tableName string, id string) error {
 // Remove all Events from Events Table based on Creator ID
 func (repo *EventRepository) DeleteEventByUserID(tableName string, userID string) error {
 
+	_, err := repo.serviceClient.CreateTable(context.Background(), tableName, nil)
+	if err == nil {
+		return nil
+	}
 	tableClient := repo.serviceClient.NewClient(tableName)
 	filter := fmt.Sprintf("Creator eq '%s'", userID)
 	options := &aztables.ListEntitiesOptions{

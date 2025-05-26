@@ -31,6 +31,7 @@ if [[ $# -eq 0 || "$1" != -* ]]; then
 	UPDATE=true
 	DELETE=true
 	THOROUGH=true
+	VERBOSE=true
 fi
 
 # Option Handling
@@ -87,6 +88,7 @@ test_post(){
 		ENDPOINT="/api/user"
 		CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' -X POST \
 		-H 'Content-Type: application/json' \
+		-H 'Authorization: Bearer User $i' \
 		-d '{\"username\":\"User $i\", \"email\":\"user$i@example.com\",\"id\":\"$i\", \"role\":\"member\"}' \
         $BASE_URL$ENDPOINT"
 		run_test "POST test <Create New Entity: User $i>" 201

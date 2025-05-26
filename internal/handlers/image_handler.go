@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"path/filepath"
@@ -178,6 +179,9 @@ func (c *ImageHandler) GetAllImages(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	for _, img := range imgNames {
+		fmt.Printf("Img: %v\n", img)
+	}
 	// Set the content type header
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)

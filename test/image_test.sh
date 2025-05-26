@@ -92,6 +92,7 @@ test_post(){
 		run_test "POST test <Upload New Image: LEC_img$i.jpg>" 201 #TODO - Consider switching Status Code
 	
 	done
+	
 }
 
 test_post_one_user_multiple_images(){
@@ -204,7 +205,7 @@ run_test(){
 
 	response=$(eval "$CURL_CMD")
 
-	body=$(echo "$response" | sed -e 's/HTTPSTATUS\:.*//g')
+	#body=$(echo "$response" | sed -e 's/HTTPSTATUS\:.*//g')
 	status=$(echo $response | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
 
 	if [ "$status" -eq "$expected_status" ]; then
@@ -215,18 +216,7 @@ run_test(){
 
 	if [ "$VERBOSE" = true ]; then
 		echo 
-		echo "$(blue "Response: ")"
-		echo "$body" | tr -d '{}' | awk -F, '
-		{ 
-			for (i = 1; i <= NF; i++) {
-				if ($i ~ /"EventName":/) {
-					print $i
-					print ""	
-				} else {
-					print $i
-				}
-			}
-		}'
+		echo "$(blue "Response: $response")"
 	fi
     echo ""
 }
@@ -245,6 +235,12 @@ create_users(){
         $BASE_URL$ENDPOINT"
 		run_test "<Create New Entity: User $i>" 201
 	done
+	CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' -X POST \
+	-H 'Content-Type: application/json' \
+	-d '{\"username\":\"User $i\", \"email\":\"user$i@example.com\",\"id\":\"ypaGadfPpspdKsnqS2\", \"role\":\"member\"}' \
+        $BASE_URL$ENDPOINT"
+	run_test "<Create New Entity: ypaGadfPpspdKsnqS2>" 201
+
 }
 
 
@@ -256,6 +252,7 @@ delete_users(){
 		CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' -X DELETE $BASE_URL$ENDPOINT"
 		run_test "<No Content: User $i>" 204
 	done	
+
 }
 
 
