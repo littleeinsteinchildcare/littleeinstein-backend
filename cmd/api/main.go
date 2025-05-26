@@ -22,7 +22,8 @@ func main() {
 
 	// Check APP_ENV after potentially loading it from .env
 	fmt.Print("App Environment Configuration: ")
-	switch environment := os.Getenv("APP_ENV"); environment {
+	environment := os.Getenv("APP_ENV")
+	switch environment {
 	case "production":
 		fmt.Println("Production")
 	case "development":
@@ -32,14 +33,17 @@ func main() {
 	default:
 		log.Fatal("Error: APP_ENV must be set to either production, development, or legacy")
 	}
+
 	fmt.Println("Note: Variables must be configured properly prior to execution")
 	fmt.Println("Starting API server...")
 
-	app := firebase.Init();
+	app := firebase.Init()
+
 	// Always sync admin claims from Firestore
 	if err := firebase.SyncAdminClaims(app); err != nil {
 		log.Fatalf("Error syncing admin claims: %v", err)
 	}
+
 	// Load configuration
 	cfg := config.LoadServerConfig()
 
@@ -52,15 +56,25 @@ func main() {
 	// Wrap with CORS
 	corsHandler := middleware.CorsMiddleware(protectedRouter)
 
-	// Server configuration with security timeouts
-	server := http.Server{
-		Addr:    fmt.Sprintf(":%d", cfg.Port),
+	// Server configuration with proper host and port
+	serverAddr := fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)
+	server := &http.Server{
+		Addr:    serverAddr,
 		Handler: corsHandler, // CORS (Cross-Origin Resource Sharing) is a browser security feature that blocks requests between different origins (domain/port/protocol).
-		// corsHandler wraps our router to add headers that allow our frontend (localhost:3000) to communicate with this backend API
+		// corsHandler wraps our router to add headers that allow our frontend to communicate with this backend API
 		// Add timeouts later as needed
 	}
 
-	log.Printf("API Server running on http://localhost:%d", cfg.Port)
+	// Environment-specific logging
+	switch cfg.Environment {
+	case "production":
+		log.Printf("API Server running on %s (Production)", serverAddr)
+	case "development":
+		log.Printf("API Server running on http://%s (Development)", serverAddr)
+		log.Printf("Local access: http://localhost:%d", cfg.Port)
+	case "legacy":
+		log.Printf("API Server running on http://%s (Legacy)", serverAddr)
+	}
 
 	// Server initialization with fatal error handling
 	if err := server.ListenAndServe(); err != nil {

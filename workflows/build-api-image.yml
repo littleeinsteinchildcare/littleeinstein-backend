@@ -4,7 +4,7 @@ name: Build API Image
 # Trigger on main branch commits and manual runs
 on:
   push:
-    branches: [ main ]
+    branches: [Actions]
   workflow_dispatch:
 
 env:
