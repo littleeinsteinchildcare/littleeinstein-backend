@@ -55,6 +55,7 @@ config.json
 # Any files or directories starting with dot except .gitignore
 .*
 !.gitignore
+!.github
 !.air.toml
 
 

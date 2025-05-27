@@ -19,8 +19,7 @@ func FirebaseAuthMiddleware(next http.Handler) http.Handler {
 
 		idToken := strings.TrimPrefix(authHeader, "Bearer ")
 
-		app := firebase.Init()
-		authClient, err := app.Auth(r.Context())
+		authClient, err := firebase.Auth(r.Context())
 		if err != nil {
 			utils.RespondUnauthorized(w, "Failed to initialize Firebase Auth")
 			return

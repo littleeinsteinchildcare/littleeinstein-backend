@@ -2,6 +2,7 @@ package utils
 
 import (
 	"context"
+	"context"
 	"encoding/json"
 	"errors"
 	"log"
@@ -17,6 +18,8 @@ const (
 	ContextUID   contextKey = "uid"
 	ContextEmail contextKey = "email"
 )
+
+type ContextKey interface{}
 
 func DecodeJSONRequest(r *http.Request) (map[string]interface{}, error) {
 	var data map[string]interface{}
@@ -43,7 +46,6 @@ func WriteJSONError(w http.ResponseWriter, status int, msg string, err error) {
 
 }
 
-
 func GetUserIDFromAuth(r *http.Request) (string, error) {
 	log.Printf("DEBUG: GetUserIDFromAuth called")
 	uid, ok := r.Context().Value(ContextUID).(string)
@@ -66,4 +68,9 @@ func RespondUnauthorized(w http.ResponseWriter, message string) {
 	_ = json.NewEncoder(w).Encode(map[string]string{
 		"error": message,
 	})
+}
+
+func GetContextString(ctx context.Context, key ContextKey) (string, bool) {
+	val, ok := ctx.Value(key).(string)
+	return val, ok
 }
