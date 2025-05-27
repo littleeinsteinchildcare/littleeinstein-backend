@@ -5,7 +5,6 @@ name: Build API Image
 on:
   push:
     branches:
-      - Actions
       - main
   workflow_dispatch:
 
