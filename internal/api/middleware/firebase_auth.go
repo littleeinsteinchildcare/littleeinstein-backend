@@ -32,10 +32,8 @@ func FirebaseAuthMiddleware(next http.Handler) http.Handler {
 		}
 
 		ctx := context.WithValue(r.Context(), utils.ContextUID, token.UID)
-		log.Printf("DEBUG: Token verified successfully, UID: %s", token.UID)
 		if email, ok := token.Claims["email"].(string); ok {
 		ctx = context.WithValue(ctx, utils.ContextEmail, email)
-		log.Printf("DEBUG: Email from token: %s", email)
 		}
 		next.ServeHTTP(w, r.WithContext(ctx))
 

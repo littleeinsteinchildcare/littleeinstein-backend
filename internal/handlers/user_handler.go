@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"littleeinsteinchildcare/backend/firebase"
-	"littleeinsteinchildcare/backend/internal/api/middleware"
 	"littleeinsteinchildcare/backend/internal/models"
 	"littleeinsteinchildcare/backend/internal/utils"
 	"net/http"
@@ -122,13 +121,13 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	// Extract user info from middleware
-	uid, ok := utils.GetContextString(ctx, middleware.ContextUID)
+	uid, ok := utils.GetContextString(ctx, utils.ContextUID)
 	if !ok {
 		http.Error(w, "Unauthorized: missing UID in context", http.StatusUnauthorized)
 		return
 	}
 
-	email, ok := utils.GetContextString(ctx, middleware.ContextEmail)
+	email, ok := utils.GetContextString(ctx, utils.ContextEmail)
 	if !ok {
 		http.Error(w, "Unauthorized: missing Email in context", http.StatusUnauthorized)
 		return

@@ -2,7 +2,6 @@ package utils
 
 import (
 	"context"
-	"context"
 	"encoding/json"
 	"errors"
 	"log"
@@ -10,7 +9,6 @@ import (
 
 )
 
-type ContextKey interface{}
 
 type contextKey string
 
