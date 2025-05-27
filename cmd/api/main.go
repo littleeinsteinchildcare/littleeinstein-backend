@@ -41,7 +41,7 @@ func main() {
 		log.Fatalf("Error syncing admin claims: %v", err)
 	}
 	// Load configuration
-	cfg := config.LoadServerConfig()
+	cfg, _ := config.LoadServerConfig()
 
 	// Set up router with all routes
 	router := routes.SetupRouter()
