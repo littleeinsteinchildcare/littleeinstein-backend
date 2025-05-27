@@ -8,14 +8,9 @@ import (
 
 	"littleeinsteinchildcare/backend/firebase"
 	"littleeinsteinchildcare/backend/internal/utils"
+	"littleeinsteinchildcare/backend/internal/common"
 )
 
-type contextKey string
-
-const (
-	ContextUID   contextKey = "uid"
-	ContextEmail contextKey = "email"
-)
 
 func FirebaseAuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -47,9 +42,9 @@ func FirebaseAuthMiddleware(next http.Handler) http.Handler {
 		}
 
 		log.Printf("DEBUG: Token verified successfully, UID: %s", token.UID)
-		ctx := context.WithValue(r.Context(), ContextUID, token.UID)
+		ctx := context.WithValue(r.Context(), common.ContextUID, token.UID)
 		if email, ok := token.Claims["email"].(string); ok {
-			ctx = context.WithValue(ctx, ContextEmail, email)
+			ctx = context.WithValue(ctx, common.ContextEmail, email)
 			log.Printf("DEBUG: Email from token: %s", email)
 		}
 		

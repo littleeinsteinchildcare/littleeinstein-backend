@@ -9,7 +9,7 @@ import (
 	"littleeinsteinchildcare/backend/internal/utils"
 	"net/http"
 	"strings"
-	"littleeinsteinchildcare/backend/internal/api/middleware"
+	"littleeinsteinchildcare/backend/internal/common"
 )
 
 // EventService interface implemented in services package
@@ -85,9 +85,12 @@ func (h *EventHandler) GetEventsByUser(w http.ResponseWriter, r *http.Request) {
 	var responses []map[string]interface{}
 	for _, event := range events {
 		resp := buildEventResponse(event)
+		log.Printf("DEBUG: Event in GetEventsByUser: ID=%s, Name=%s, Location=%s, Description=%s, Color=%s", 
+			event.ID, event.EventName, event.Location, event.Description, event.Color)
 		responses = append(responses, resp)
 	}
 	
+	log.Printf("DEBUG: GetEventsByUser returning %d events to frontend", len(responses))
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(responses)
@@ -138,15 +141,37 @@ func (h *EventHandler) CreateEvent(w http.ResponseWriter, r *http.Request) {
 		invitees_list = append(invitees_list, user)
 	}
 
-	event := models.Event{
-		ID:        eventData["id"].(string),
-		EventName: eventData["eventname"].(string),
-		Date:      eventData["date"].(string),
-		StartTime: eventData["starttime"].(string),
-		EndTime:   eventData["endtime"].(string),
-		Creator:   creator,
-		Invitees:  invitees_list,
+	// Extract additional fields with safe type assertions
+	location := ""
+	if loc, ok := eventData["location"].(string); ok {
+		location = loc
 	}
+	
+	description := ""
+	if desc, ok := eventData["description"].(string); ok {
+		description = desc
+	}
+	
+	color := "#4CAF50" // Default green color
+	if col, ok := eventData["color"].(string); ok && col != "" {
+		color = col
+	}
+
+	event := models.Event{
+		ID:          eventData["id"].(string),
+		EventName:   eventData["eventname"].(string),
+		Date:        eventData["date"].(string),
+		StartTime:   eventData["starttime"].(string),
+		EndTime:     eventData["endtime"].(string),
+		Location:    location,
+		Description: description,
+		Color:       color,
+		Creator:     creator,
+		Invitees:    invitees_list,
+	}
+	
+	log.Printf("DEBUG: Created event object: ID=%s, Name=%s, Location=%s, Description=%s, Color=%s", 
+		event.ID, event.EventName, event.Location, event.Description, event.Color)
 
 	err = h.eventService.CreateEvent(event)
 	if err != nil {
@@ -155,6 +180,7 @@ func (h *EventHandler) CreateEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := buildEventResponse(event)
+	log.Printf("DEBUG: Event response being sent to frontend: %+v", response)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(response)
@@ -226,6 +252,15 @@ func (h *EventHandler) BuildPartialEvent(w http.ResponseWriter, eventData map[st
 	if v, ok := eventData["endtime"].(string); ok {
 		event.EndTime = v
 	}
+	if v, ok := eventData["location"].(string); ok {
+		event.Location = v
+	}
+	if v, ok := eventData["description"].(string); ok {
+		event.Description = v
+	}
+	if v, ok := eventData["color"].(string); ok {
+		event.Color = v
+	}
 
 	//! Questionable - Given time for a refactor, this could be cleaner with a better overall structure
 	// Grab IDs from Event Data and populate Event object with relevant User objects
@@ -259,25 +294,28 @@ func (h *EventHandler) BuildPartialEvent(w http.ResponseWriter, eventData map[st
 // Helper functiont to package JSON response
 func buildEventResponse(event models.Event) map[string]interface{} {
 	response := map[string]interface{}{
-		"id":        event.ID,
-		"eventname": event.EventName,
-		"date":      event.Date,
-		"starttime": event.StartTime,
-		"endtime":   event.EndTime,
-		"creator":   event.Creator,
-		"invitees":  event.Invitees,
+		"id":          event.ID,
+		"eventname":   event.EventName,
+		"date":        event.Date,
+		"starttime":   event.StartTime,
+		"endtime":     event.EndTime,
+		"location":    event.Location,
+		"description": event.Description,
+		"color":       event.Color,
+		"creator":     event.Creator,
+		"invitees":    event.Invitees,
 	}
 	return response
 }
 
 func (h *EventHandler) TestConnection(w http.ResponseWriter, r *http.Request) {
-	uid, ok := r.Context().Value(middleware.ContextUID).(string)
+	uid, ok := r.Context().Value(common.ContextUID).(string)
 	if !ok {
 		http.Error(w, "UID missing in context", http.StatusInternalServerError)
 		return
 	}
 
-	email, _ := r.Context().Value(middleware.ContextEmail).(string)
+	email, _ := r.Context().Value(common.ContextEmail).(string)
 
 	response := map[string]interface{}{
 		"status": "authenticated",

@@ -85,14 +85,33 @@ func (repo *EventRepository) GetEvent(tableName string, id string) (models.Event
 
 	//! END Hacky }
 
+	// Safely extract additional fields with default values
+	location := ""
+	if loc, ok := myEntity.Properties["Location"].(string); ok {
+		location = loc
+	}
+	
+	description := ""
+	if desc, ok := myEntity.Properties["Description"].(string); ok {
+		description = desc
+	}
+	
+	color := "#4CAF50" // Default green color
+	if col, ok := myEntity.Properties["Color"].(string); ok && col != "" {
+		color = col
+	}
+
 	event := models.Event{
-		ID:        myEntity.RowKey,
-		EventName: myEntity.Properties["EventName"].(string),
-		Date:      myEntity.Properties["Date"].(string),
-		StartTime: myEntity.Properties["StartTime"].(string),
-		EndTime:   myEntity.Properties["EndTime"].(string),
-		Creator:   creator,
-		Invitees:  invitees_list,
+		ID:          myEntity.RowKey,
+		EventName:   myEntity.Properties["EventName"].(string),
+		Date:        myEntity.Properties["Date"].(string),
+		StartTime:   myEntity.Properties["StartTime"].(string),
+		EndTime:     myEntity.Properties["EndTime"].(string),
+		Location:    location,
+		Description: description,
+		Color:       color,
+		Creator:     creator,
+		Invitees:    invitees_list,
 	}
 
 	return event, nil
@@ -154,12 +173,15 @@ func (repo *EventRepository) CreateEvent(tableName string, event models.Event) e
 			RowKey:       event.ID,
 		},
 		Properties: map[string]any{
-			"EventName": event.EventName,
-			"Date":      event.Date,
-			"StartTime": event.StartTime,
-			"EndTime":   event.EndTime,
-			"Creator":   event.Creator.ID,
-			"Invitees":  ids_string,
+			"EventName":   event.EventName,
+			"Date":        event.Date,
+			"StartTime":   event.StartTime,
+			"EndTime":     event.EndTime,
+			"Location":    event.Location,
+			"Description": event.Description,
+			"Color":       event.Color,
+			"Creator":     event.Creator.ID,
+			"Invitees":    ids_string,
 		},
 	}
 
@@ -210,12 +232,15 @@ func (repo *EventRepository) UpdateEvent(tableName string, newEventData models.E
 			RowKey:       event.ID,
 		},
 		Properties: map[string]any{
-			"EventName": event.EventName,
-			"Date":      event.Date,
-			"StartTime": event.StartTime,
-			"EndTime":   event.EndTime,
-			"Creator":   event.Creator.ID,
-			"Invitees":  ids_string,
+			"EventName":   event.EventName,
+			"Date":        event.Date,
+			"StartTime":   event.StartTime,
+			"EndTime":     event.EndTime,
+			"Location":    event.Location,
+			"Description": event.Description,
+			"Color":       event.Color,
+			"Creator":     event.Creator.ID,
+			"Invitees":    ids_string,
 		},
 	}
 

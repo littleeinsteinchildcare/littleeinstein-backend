@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/url"
 	"os"
+	"strings"
 	"time"
 
 	"littleeinsteinchildcare/backend/internal/config"
@@ -62,12 +63,29 @@ func NewBlobStorageService(accountName, accountKey, containerName string) (*Blob
 		// If the container already exists, continue
 		if serr, ok := err.(azblob.StorageError); ok {
 			if serr.ServiceCode() == azblob.ServiceCodeContainerAlreadyExists {
+				log.Printf("Container '%s' already exists, continuing...", containerName)
+				err = nil
+			}
+		}
+		// Also check for HTTP 409 status (Conflict) and error message patterns
+		if err != nil {
+			errStr := err.Error()
+			if serr, ok := err.(azblob.StorageError); ok {
+				if serr.Response().StatusCode == 409 {
+					log.Printf("Container '%s' already exists (HTTP 409), continuing...", containerName)
+					err = nil
+				}
+			} else if strings.Contains(errStr, "400 Bad Request") || 
+					  strings.Contains(errStr, "ContainerAlreadyExists") {
+				log.Printf("Container '%s' creation returned 400/already exists error, continuing...", containerName)
 				err = nil
 			}
 		}
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to create or access container '%s': %w", containerName, err)
 		}
+	} else {
+		log.Printf("Successfully created container '%s'", containerName)
 	}
 
 	return &BlobStorageService{

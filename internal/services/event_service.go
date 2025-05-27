@@ -90,13 +90,16 @@ func (s *EventService) GetAllEvents() ([]models.Event, error) {
 
 		// Build list of all events in table
 		events = append(events, models.Event{
-			ID:        r.RowKey,
-			EventName: r.EventName,
-			Date:      r.Date,
-			StartTime: r.StartTime,
-			EndTime:   r.EndTime,
-			Creator:   creator,
-			Invitees:  invitees,
+			ID:          r.RowKey,
+			EventName:   r.EventName,
+			Date:        r.Date,
+			StartTime:   r.StartTime,
+			EndTime:     r.EndTime,
+			Location:    r.Location,
+			Description: r.Description,
+			Color:       r.Color,
+			Creator:     creator,
+			Invitees:    invitees,
 		})
 	}
 
