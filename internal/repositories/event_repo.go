@@ -71,16 +71,23 @@ func (repo *EventRepository) GetEvent(tableName string, id string) (models.Event
 	}
 
 	// Process Invitee IDs to store list of Users in Event struct
-	invitee_ids := strings.Split(myEntity.Properties["Invitees"].(string), ",")
-
 	var invitees_list []models.User
+	inviteesStr := myEntity.Properties["Invitees"].(string)
+	
+	if inviteesStr != "" {
+		invitee_ids := strings.Split(inviteesStr, ",")
 
-	for _, id := range invitee_ids {
-		user, err := userRepo.GetUser("UsersTable", id)
-		if err != nil {
-			return models.Event{}, fmt.Errorf("EventRepo.GetEvent: Failed to get invitee %w", err)
+		for _, id := range invitee_ids {
+			id = strings.TrimSpace(id)
+			if id == "" {
+				continue
+			}
+			user, err := userRepo.GetUser("UsersTable", id)
+			if err != nil {
+				return models.Event{}, fmt.Errorf("EventRepo.GetEvent: Failed to get invitee %w", err)
+			}
+			invitees_list = append(invitees_list, user)
 		}
-		invitees_list = append(invitees_list, user)
 	}
 
 	//! END Hacky }

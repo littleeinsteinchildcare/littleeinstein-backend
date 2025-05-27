@@ -195,6 +195,7 @@ func (h *EventHandler) UpdateEvent(w http.ResponseWriter, r *http.Request) {
 		utils.WriteJSONError(w, http.StatusBadRequest, "EventHandler.UpdateEvent: Failed to Decode JSON", nil)
 		return
 	}
+	log.Printf("DEBUG UpdateEvent: Received event data: %+v", eventData)
 	if _, ok := eventData["id"]; !ok {
 		utils.WriteJSONError(w, http.StatusBadRequest, "EventHandler.UpdateEvent: Missing required field: id", nil)
 		return
@@ -276,15 +277,26 @@ func (h *EventHandler) BuildPartialEvent(w http.ResponseWriter, eventData map[st
 
 	var invitees_list []models.User
 	if eventData["invitees"] != nil {
-		invitee_ids := strings.Split(eventData["invitees"].(string), ",")
+		inviteesStr := eventData["invitees"].(string)
+		log.Printf("DEBUG BuildPartialEvent: Processing invitees string: '%s'", inviteesStr)
+		if inviteesStr != "" {
+			invitee_ids := strings.Split(inviteesStr, ",")
+			log.Printf("DEBUG BuildPartialEvent: Split invitee IDs: %+v", invitee_ids)
 
-		for _, id := range invitee_ids {
-			id = strings.TrimSpace(id)
-			user, err := h.userService.GetUserByID(id)
-			if err != nil {
-				return event, err
+			for _, id := range invitee_ids {
+				id = strings.TrimSpace(id)
+				log.Printf("DEBUG BuildPartialEvent: Processing invitee ID: '%s'", id)
+				if id == "" {
+					log.Printf("DEBUG BuildPartialEvent: Skipping empty invitee ID")
+					continue
+				}
+				user, err := h.userService.GetUserByID(id)
+				if err != nil {
+					log.Printf("DEBUG BuildPartialEvent: Failed to get user with ID '%s': %v", id, err)
+					return event, err
+				}
+				invitees_list = append(invitees_list, user)
 			}
-			invitees_list = append(invitees_list, user)
 		}
 		event.Invitees = invitees_list
 	}
