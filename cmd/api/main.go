@@ -34,7 +34,12 @@ func main() {
 	}
 	fmt.Println("Note: Variables must be configured properly prior to execution")
 	fmt.Println("Starting API server...")
-	firebase.Init();
+
+	app := firebase.Init()
+	// Always sync admin claims from Firestore
+	if err := firebase.SyncAdminClaims(app); err != nil {
+		log.Fatalf("Error syncing admin claims: %v", err)
+	}
 	// Load configuration
 	cfg := config.LoadServerConfig()
 

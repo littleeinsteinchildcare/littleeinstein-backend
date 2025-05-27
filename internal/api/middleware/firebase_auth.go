@@ -9,6 +9,14 @@ import (
 	"littleeinsteinchildcare/backend/firebase"
 	"littleeinsteinchildcare/backend/internal/utils"
 )
+
+type contextKey string
+
+const (
+	ContextUID   contextKey = "uid"
+	ContextEmail contextKey = "email"
+)
+
 func FirebaseAuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("DEBUG: FirebaseAuthMiddleware called for %s %s", r.Method, r.URL.Path)
@@ -24,8 +32,7 @@ func FirebaseAuthMiddleware(next http.Handler) http.Handler {
 		idToken := strings.TrimPrefix(authHeader, "Bearer ")
 		log.Printf("DEBUG: Extracted token: %s...", idToken[:min(len(idToken), 20)])
 
-		app := firebase.Init()
-		authClient, err := app.Auth(r.Context())
+		authClient, err := firebase.Auth(r.Context())
 		if err != nil {
 			log.Printf("DEBUG: Failed to initialize Firebase Auth: %v", err)
 			utils.RespondUnauthorized(w, "Failed to initialize Firebase Auth")
@@ -40,9 +47,9 @@ func FirebaseAuthMiddleware(next http.Handler) http.Handler {
 		}
 
 		log.Printf("DEBUG: Token verified successfully, UID: %s", token.UID)
-		ctx := context.WithValue(r.Context(), utils.ContextUID, token.UID)
+		ctx := context.WithValue(r.Context(), ContextUID, token.UID)
 		if email, ok := token.Claims["email"].(string); ok {
-			ctx = context.WithValue(ctx, utils.ContextEmail, email)
+			ctx = context.WithValue(ctx, ContextEmail, email)
 			log.Printf("DEBUG: Email from token: %s", email)
 		}
 		

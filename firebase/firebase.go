@@ -8,6 +8,8 @@ import (
 
 	firebase "firebase.google.com/go/v4"
 	"google.golang.org/api/option"
+	"firebase.google.com/go/v4/auth"
+	"cloud.google.com/go/firestore"
 )
 
 var (
@@ -30,4 +32,19 @@ func Init() *firebase.App {
 		}
 	})
 	return app
+}
+
+// Auth returns the Firebase Auth client. It ensures Init() is run.
+func Auth(ctx context.Context) (*auth.Client, error) {
+	if app == nil {
+		Init()
+	}
+	return app.Auth(ctx)
+}
+
+func Firestore(ctx context.Context) (*firestore.Client, error) {
+	if app == nil {
+		Init() 
+	}
+	return app.Firestore(ctx)
 }

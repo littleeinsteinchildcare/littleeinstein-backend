@@ -1,18 +1,14 @@
 package utils
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"log"
 	"net/http"
 )
 
-type contextKey string
-
-const (
-	ContextUID   contextKey = "uid"
-	ContextEmail contextKey = "email"
-)
+type ContextKey interface{}
 
 func DecodeJSONRequest(r *http.Request) (map[string]interface{}, error) {
 	var data map[string]interface{}
@@ -39,17 +35,13 @@ func WriteJSONError(w http.ResponseWriter, status int, msg string, err error) {
 
 }
 
-
 func GetUserIDFromAuth(r *http.Request) (string, error) {
-	log.Printf("DEBUG: GetUserIDFromAuth called")
-	uid, ok := r.Context().Value(ContextUID).(string)
-	log.Printf("DEBUG: Context UID lookup - found: %v, value: '%s'", ok, uid)
-	if !ok || uid == "" {
-		log.Printf("DEBUG: User ID not found in context or empty")
-		return "", errors.New("User ID not found in context - authentication required")
+	//TODO! - Implement real auth grab (remove r from arguments, pass in context
+	userID := r.Header.Get("X-User-ID")
+	if userID == "" {
+		return "", errors.New("request Header is missing required field: X-User-ID")
 	}
-	log.Printf("DEBUG: Returning UID: %s", uid)
-	return uid, nil
+	return userID, nil
 }
 
 func RespondUnauthorized(w http.ResponseWriter, message string) {
@@ -58,4 +50,9 @@ func RespondUnauthorized(w http.ResponseWriter, message string) {
 	_ = json.NewEncoder(w).Encode(map[string]string{
 		"error": message,
 	})
+}
+
+func GetContextString(ctx context.Context, key ContextKey) (string, bool) {
+	val, ok := ctx.Value(key).(string)
+	return val, ok
 }

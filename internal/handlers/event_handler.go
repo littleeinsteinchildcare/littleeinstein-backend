@@ -9,6 +9,7 @@ import (
 	"littleeinsteinchildcare/backend/internal/utils"
 	"net/http"
 	"strings"
+	"littleeinsteinchildcare/backend/internal/api/middleware"
 )
 
 // EventService interface implemented in services package
@@ -270,13 +271,13 @@ func buildEventResponse(event models.Event) map[string]interface{} {
 }
 
 func (h *EventHandler) TestConnection(w http.ResponseWriter, r *http.Request) {
-	uid, ok := r.Context().Value(utils.ContextUID).(string)
+	uid, ok := r.Context().Value(middleware.ContextUID).(string)
 	if !ok {
 		http.Error(w, "UID missing in context", http.StatusInternalServerError)
 		return
 	}
 
-	email, _ := r.Context().Value(utils.ContextEmail).(string)
+	email, _ := r.Context().Value(middleware.ContextEmail).(string)
 
 	response := map[string]interface{}{
 		"status": "authenticated",
