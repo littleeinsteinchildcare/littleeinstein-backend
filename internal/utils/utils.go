@@ -57,11 +57,6 @@ func GetUserIDFromAuth(r *http.Request) (string, error) {
 	return uid, nil
 }
 
-func GetContextString(ctx context.Context, key ContextKey) (string, bool) {
-    val, ok := ctx.Value(key).(string)
-    return val, ok
-}
-
 func RespondUnauthorized(w http.ResponseWriter, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusUnauthorized)
