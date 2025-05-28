@@ -9,6 +9,7 @@ import (
 	"littleeinsteinchildcare/backend/internal/services"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 )
 
@@ -80,6 +81,19 @@ func SetupRouter() *http.ServeMux {
 	RegisterBlobRoutes(router, imageHandler)
 
 	// Register Azure B2C auth endpoint
+
+	// ---------- EMAIL MODULE SETUP ----------
+
+	apiKey := os.Getenv("SENDGRID_API_KEY")
+	emailService := services.NewSendGridService(
+		"Little Einstein",
+		"hello@littleeinsteinchildcare.org",
+		apiKey,
+	)
+
+	emailHandler := handlers.NewEmailHandler(emailService)
+
+	RegisterEmailRoutes(router, emailHandler)
 
 	// ---------- BANNER MODULE SETUP ----------
 	// Create banner service (no repository needed)
