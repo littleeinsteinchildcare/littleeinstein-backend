@@ -1,6 +1,7 @@
 package config
 
 import (
+	"log"
 	"os"
 )
 
@@ -29,20 +30,37 @@ func LoadBlobConfig() (*BlobConfig, error) {
 	// if err != nil {
 	// 	return nil, err
 	// }
-
+	var accEnvName string
+	var accEnvKey string
+	var accEnvURL string
 	var config BlobConfig
+
+	switch environment := os.Getenv("APP_ENV"); environment {
+	case "production":
+		accEnvName = "AZURE_STORAGE_ACCOUNT_NAME"
+		accEnvKey = "AZURE_STORAGE_ACCOUNT_KEY"
+		accEnvURL = "AZURE_BLOB_SERVICE_URL"
+	case "development":
+		accEnvName = "LOCAL_AZURE_STORAGE_ACCOUNT_NAME"
+		accEnvKey = "LOCAL_AZURE_STORAGE_ACCOUNT_KEY"
+		accEnvURL = "LOCAL_AZURE_BLOB_SERVICE_URL"
+	case "legacy":
+		log.Fatal("Error: Legacy environment is no longer functional")
+	default:
+		log.Fatal("Error: APP_ENV must be set to either production or development")
+	}
 	// Load from environment variables if available
 	if os.Getenv("PORT") != "" {
 		config.Port = os.Getenv("PORT")
 	}
-	if os.Getenv("AZURE_STORAGE_ACCOUNT_NAME") != "" {
-		config.AzureAccountName = os.Getenv("AZURE_STORAGE_ACCOUNT_NAME")
+	if os.Getenv(accEnvName) != "" {
+		config.AzureAccountName = os.Getenv(accEnvName)
 	}
-	if os.Getenv("AZURE_STORAGE_ACCOUNT_KEY") != "" {
-		config.AzureAccountKey = os.Getenv("AZURE_STORAGE_ACCOUNT_KEY")
+	if os.Getenv(accEnvKey) != "" {
+		config.AzureAccountKey = os.Getenv(accEnvKey)
 	}
-	if os.Getenv("AZURE_BLOB_SERVICE_URL") != "" {
-		config.AzureServiceURL = os.Getenv("AZURE_BLOB_SERVICE_URL")
+	if os.Getenv(accEnvURL) != "" {
+		config.AzureServiceURL = os.Getenv(accEnvURL)
 	}
 	if os.Getenv("AZURE_BLOB_CONTAINER_NAME") != "" {
 		config.AzureContainerName = os.Getenv("AZURE_BLOB_CONTAINER_NAME")

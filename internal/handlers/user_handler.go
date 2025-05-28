@@ -9,6 +9,7 @@ import (
 	"littleeinsteinchildcare/backend/internal/api/middleware"
 	"littleeinsteinchildcare/backend/internal/models"
 	"littleeinsteinchildcare/backend/internal/utils"
+	"log"
 	"net/http"
 
 	"cloud.google.com/go/firestore"
@@ -106,9 +107,10 @@ func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 // DeleteUser handles DELETE requests to remove an existing user
 func (h *UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
-
+	log.Printf("DEBUG: CALLING DELETE USER IN USERHANDLER")
 	err := h.userService.DeleteUserByID(id)
 	if err != nil {
+		log.Printf("DEBUG: DELETE USER BY ID HANDLER FAILED ON ID %s", id)
 		utils.WriteJSONError(w, http.StatusNotFound, fmt.Sprintf("UserHandler.DeleteUser: Failed to delete User with ID %s", id), err)
 		return
 	}

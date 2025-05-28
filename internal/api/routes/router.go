@@ -22,6 +22,8 @@ func SetupRouter() *http.ServeMux {
 	// ---------- AZURE TABLE STORAGE CONFIGURATION ----------
 	// Load Azure Table Storage configuration (account name, key, container URL)
 	// from environment variables or configuration files
+
+	log.Printf("DEBUG: LOADING AZTABLE CONFIG")
 	azTableCfg, err := config.LoadAzTableConfig()
 	if err != nil {
 		log.Fatalf("Router.SetupRouter: Failed to load Azure Table config: %v", err)
@@ -30,6 +32,8 @@ func SetupRouter() *http.ServeMux {
 	// ---------- USER MODULE SETUP ----------
 	// Initialize user repository with Azure Table credentials
 	// This creates the shared key credential and service client for Azure Tables
+
+	log.Printf("DEBUG: CREATING NEW USER REPO")
 	userRepo, err := repositories.NewUserRepo(*azTableCfg)
 	if err != nil {
 		log.Fatalf("Router.SetupRouter: Failed to create user repository: %v", err)

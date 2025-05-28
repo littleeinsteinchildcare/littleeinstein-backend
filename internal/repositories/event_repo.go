@@ -7,6 +7,7 @@ import (
 	"littleeinsteinchildcare/backend/internal/config"
 	"littleeinsteinchildcare/backend/internal/models"
 	"littleeinsteinchildcare/backend/internal/services"
+	"log"
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/data/aztables"
@@ -23,26 +24,31 @@ type EventRepository struct {
 
 // NewEventRepo creates and returns a new, unconnected EventRepo object
 func NewEventRepo(cfg config.AzTableConfig) (services.EventRepo, error) {
+	log.Printf("EVENT REPO - NEW EVENT REPO: CALLED\n")
 	cred, err := aztables.NewSharedKeyCredential(cfg.AzureAccountName, cfg.AzureAccountKey)
 	if err != nil {
+		log.Printf("EVENT REPO - NEW EVENT REPO - NEW SHARED KEY CREDENTIAL FAILED: ERROR=%v\n", err)
 		return nil, fmt.Errorf("EventRepo.NewEventRepo: Failed to create credentials: %w", err)
 	}
 	client, err := aztables.NewServiceClientWithSharedKey(cfg.AzureContainerName, cred, nil)
 	if err != nil {
+		log.Printf("EVENT REPO - NEW EVENT REPO - NEW SERVICE CLIENT FAILED: ERROR=%v\n", err)
 		return nil, fmt.Errorf("EventRepo.NewEventRepo: Failed to initialize service client: %w", err)
 	}
+	log.Printf("EVENT REPO - NEW EVENT REPO: SUCCESS\n")
 	return &EventRepository{serviceClient: *client}, nil
 }
 
 // GetEvent retrieves and stores entity data in a Repo object
 func (repo *EventRepository) GetEvent(tableName string, id string) (models.Event, error) {
-
+	log.Printf("EVENT REPO - GET EVENT: CALLED WITH TABLENAME=%s ID=%s\n", tableName, id)
 	ctx := context.Background()
 	tableClient := repo.serviceClient.NewClient(tableName)
 
 	// Get Event in EDMEntity form
 	resp, err := tableClient.GetEntity(ctx, PKey, id, nil)
 	if err != nil {
+		log.Printf("EVENT REPO - GET EVENT - GET ENTITY: FAILED: ERROR=%v\n", err)
 		return models.Event{}, fmt.Errorf("EventRepo.GetEvent: Failed to retrieve entity from %s: %w", tableName, err)
 	}
 
@@ -50,6 +56,7 @@ func (repo *EventRepository) GetEvent(tableName string, id string) (models.Event
 	var myEntity aztables.EDMEntity
 	err = json.Unmarshal(resp.Value, &myEntity)
 	if err != nil {
+		log.Printf("EVENT REPO - GET EVENT - UNMARSHAL: FAILED: ERROR=%v\n", err)
 		return models.Event{}, fmt.Errorf("EventRepo.GetEvent: Failed to deserialize entity: %w", err)
 	}
 
@@ -57,16 +64,19 @@ func (repo *EventRepository) GetEvent(tableName string, id string) (models.Event
 	//! If time allows - big point to refactor here using the DTO approach
 	cfg, err := config.LoadAzTableConfig()
 	if err != nil {
+		log.Printf("EVENT REPO - GET EVENT - UNMARSHAL: FAILED: ERROR=%v\n", err)
 		return models.Event{}, fmt.Errorf("EventRepo.GetEvent: Failed to Load Aztable config %w", err)
 	}
 	userRepo, err := NewUserRepo(*cfg)
 	if err != nil {
+		log.Printf("EVENT REPO - GET EVENT - USER REPO.NEW USER REPO: FAILED: ERROR=%v\n", err)
 		return models.Event{}, fmt.Errorf("EventRepo.GetEvent: Failed to initialize User Repo %w", err)
 	}
 
 	// Grab creator from User Repo to fill in the Event struct
 	creator, err := userRepo.GetUser("UsersTable", myEntity.Properties["Creator"].(string))
 	if err != nil {
+		log.Printf("EVENT REPO - GET EVENT - USER REPO.GET USER REPO: FAILED: ERROR=%v\n", err)
 		return models.Event{}, fmt.Errorf("EventRepo.GetEvent: Failed to get Creator %w", err)
 	}
 
@@ -78,6 +88,7 @@ func (repo *EventRepository) GetEvent(tableName string, id string) (models.Event
 	for _, id := range invitee_ids {
 		user, err := userRepo.GetUser("UsersTable", id)
 		if err != nil {
+			log.Printf("EVENT REPO - GET EVENT - USER REPO.GET USER LOOP REPO: FAILED: ERROR=%v\n", err)
 			return models.Event{}, fmt.Errorf("EventRepo.GetEvent: Failed to get invitee %w", err)
 		}
 		invitees_list = append(invitees_list, user)
@@ -85,6 +96,7 @@ func (repo *EventRepository) GetEvent(tableName string, id string) (models.Event
 
 	//! END Hacky }
 
+	log.Printf("EVENT REPO - GET EVENT - PACKAGING EVENT\n")
 	event := models.Event{
 		ID:        myEntity.RowKey,
 		EventName: myEntity.Properties["EventName"].(string),
@@ -94,11 +106,13 @@ func (repo *EventRepository) GetEvent(tableName string, id string) (models.Event
 		Creator:   creator,
 		Invitees:  invitees_list,
 	}
+	log.Printf("EVENT REPO - GET EVENT - PACKAGED EVENT SUCCESS\n")
 
 	return event, nil
 }
 
 func (repo *EventRepository) GetAllEvents(tableName string) ([]models.EventEntity, error) {
+	log.Printf("EVENT REPO - GET ALL EVENTS: CALLED WITH TABLENAME=%s\n", tableName)
 
 	// Establish new client and set filter
 	tableClient := repo.serviceClient.NewClient(tableName)
@@ -114,6 +128,7 @@ func (repo *EventRepository) GetAllEvents(tableName string) ([]models.EventEntit
 	for pager.More() {
 		response, err := pager.NextPage(context.Background())
 		if err != nil {
+			log.Printf("EVENT REPO - GET ALL EVENTS - LISTING EVENTS FAILED: ERROR=%v\n", err)
 			return nil, fmt.Errorf("EventRepo.GetAllEvents: Failed to acquire next page: %w", err)
 		}
 		pageCount += 1
@@ -123,16 +138,19 @@ func (repo *EventRepository) GetAllEvents(tableName string) ([]models.EventEntit
 			var entityData models.EventEntity
 			err = json.Unmarshal(tableData, &entityData)
 			if err != nil {
+				log.Printf("EVENT REPO - GET ALL EVENTS - LISTING EVENTS UNMARSHALLED FAILED: ERROR=%v\n", err)
 				return nil, fmt.Errorf("EventRepo.GetAllEvents: Failed to unmarshal entity: %w", err)
 			}
 			events = append(events, entityData)
 		}
 	}
+	log.Printf("EVENT REPO - GET ALL EVENTS: SUCCESS: EVENTS=%v\n", events)
 	return events, nil
 }
 
 // CreateEvent creates an aztable entity in the specified table name, creating the table if it doesn't exist
 func (repo *EventRepository) CreateEvent(tableName string, event models.Event) error {
+	log.Printf("EVENT REPO - CREATE EVENT: CALLED WITH TABLENAME=%s EVENT=%v\n", tableName, event)
 
 	// Create CSV of Invitee IDs
 	var invitee_ids []string
@@ -141,6 +159,7 @@ func (repo *EventRepository) CreateEvent(tableName string, event models.Event) e
 	}
 	ids_string := strings.Join(invitee_ids, ",")
 
+	log.Printf("EVENT REPO - CREATE EVENT - PACKAGING EVENT: EVENT=%v\n", event)
 	//https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/sdk/data/aztables
 	eventEntity := aztables.EDMEntity{
 		Entity: aztables.Entity{
@@ -156,10 +175,12 @@ func (repo *EventRepository) CreateEvent(tableName string, event models.Event) e
 			"Invitees":  ids_string,
 		},
 	}
+	log.Printf("EVENT REPO - CREATE EVENT PACKAGED EVENT SUCCESS\n")
 
 	//https://pkg.go.dev/encoding/json
 	serializedEntity, err := json.Marshal(eventEntity)
 	if err != nil {
+		log.Printf("EVENT REPO - CREATE EVENT - MARSHALLING: FAILED: ERROR=%v\n", err)
 		return fmt.Errorf("EventRepo.CreateEvent: Failed to serialize entity %w", err)
 	}
 
@@ -171,23 +192,28 @@ func (repo *EventRepository) CreateEvent(tableName string, event models.Event) e
 
 	_, err = tableClient.AddEntity(context.Background(), serializedEntity, nil)
 	if err != nil {
+		log.Printf("EVENT REPO - CREATE EVENT - ADD ENTITY: FAILED: ERROR=%v\n", err)
 		return fmt.Errorf("EventRepo.CreateEvent: Failed to add event entity %w", err)
 	}
 
+	log.Printf("EVENT REPO - CREATE EVENT: SUCCESS\n")
 	return nil
 }
 
 // Update Event with partial or full updates (excluding Creator ID)
 func (repo *EventRepository) UpdateEvent(tableName string, newEventData models.Event) (models.Event, error) {
+	log.Printf("EVENT REPO - UPDATE EVENT: CALLED WITH TABLENAME=%s NEWEVENTDATA=%v\n", tableName, newEventData)
 
 	tableClient := repo.serviceClient.NewClient(tableName)
 	event, err := repo.GetEvent(tableName, newEventData.ID)
 	if err != nil {
+		log.Printf("EVENT REPO - UPDATE EVENT - USER REPO.GET EVENT: FAILED: ERROR=%v\n", err)
 		return models.Event{}, fmt.Errorf("EVentRepo.UpdateEvent: Failed to retrieve event ID %s from %s: %w", newEventData.ID, tableName, err)
 	}
 	// Update event fields inside Event object
 	err = event.Update(newEventData)
 	if err != nil {
+		log.Printf("EVENT REPO - UPDATE EVENT - EVENT.UPDATE: FAILED: ERROR=%v\n", err)
 		return models.Event{}, fmt.Errorf("EventRepo.UpdateEvent: Failed to updated event ID %s's fields: %w", event.ID, err)
 	}
 
@@ -198,6 +224,7 @@ func (repo *EventRepository) UpdateEvent(tableName string, newEventData models.E
 	}
 	ids_string := strings.Join(invitee_ids, ",")
 
+	log.Printf("EVENT REPO - UPDATE EVENT - PACKAGING EVENT ENTITY\n")
 	eventEntity := aztables.EDMEntity{
 		Entity: aztables.Entity{
 			PartitionKey: PKey,
@@ -213,34 +240,42 @@ func (repo *EventRepository) UpdateEvent(tableName string, newEventData models.E
 		},
 	}
 
+	log.Printf("EVENT REPO - UPDATE EVENT - PACKAGED EVENT ENTITY SUCCESS\n")
 	// Serialize and Update
 	serEntity, err := json.Marshal(eventEntity)
 	if err != nil {
+		log.Printf("EVENT REPO - UPDATE EVENT - MARSHAL: FAILED: ERROR=%v\n", err)
 		return models.Event{}, fmt.Errorf("EventRepo.UpdateUser: Failed to serialize event data: %w", err)
 	}
 	_, err = tableClient.UpdateEntity(context.Background(), serEntity, nil)
 	if err != nil {
+		log.Printf("EVENT REPO - UPDATE EVENT - UPDATE ENTITY: FAILED: ERROR=%v\n", err)
 		return models.Event{}, fmt.Errorf("EventRepo.UpdateEntity: Failed to update entity in %s: %w", tableName, err)
 	}
 
+	log.Printf("EVENT REPO - CREATE EVENT: SUCCESS EVENT=%v\n", event)
 	return event, nil
 }
 
 // Remove an Event from the table based on Event ID
 func (repo *EventRepository) DeleteEvent(tableName string, id string) error {
+	log.Printf("EVENT REPO - DELETE EVENT: CALLED WITH TABLENAME=%s ID=%s\n", tableName, id)
 	ctx := context.Background()
 	tableClient := repo.serviceClient.NewClient(tableName)
 
 	_, err := tableClient.DeleteEntity(ctx, PKey, id, nil)
 	if err != nil {
+		log.Printf("EVENT REPO - DELETE EVENT - DELETE ENTITY: FAILED: ERROR=%v\n", err)
 		return fmt.Errorf("EventRepo.DeleteEvent: Failed to delete entity in %s: %w", tableName, err)
 	}
 
+	log.Printf("EVENT REPO - DELETE EVENT: SUCCESS\n")
 	return nil
 }
 
 // Remove all Events from Events Table based on Creator ID
 func (repo *EventRepository) DeleteEventByUserID(tableName string, userID string) error {
+	log.Printf("EVENT REPO - DELETE EVENT BY USER ID: CALLED WITH TABLENAME=%s ID=%s\n", tableName, userID)
 
 	tableClient := repo.serviceClient.NewClient(tableName)
 	filter := fmt.Sprintf("Creator eq '%s'", userID)
@@ -254,6 +289,7 @@ func (repo *EventRepository) DeleteEventByUserID(tableName string, userID string
 	for pager.More() {
 		response, err := pager.NextPage(context.Background())
 		if err != nil {
+			log.Printf("EVENT REPO - DELETE EVENT BY USER ID - LISTING EVENTS: FAILED: ERROR=%v\n", err)
 			return fmt.Errorf("EventRepo.DeleteEventByUserID: Failed to acquire next page: %w", err)
 		}
 		pageCount += 1
@@ -263,15 +299,18 @@ func (repo *EventRepository) DeleteEventByUserID(tableName string, userID string
 			err = json.Unmarshal(tableData, &entityData)
 			repo.DeleteEvent(services.EVENTSTABLE, entityData.CreatorID)
 			if err != nil {
+				log.Printf("EVENT REPO - DELETE EVENT BY USER ID - USER REPO.DELETE EVENT: FAILED: ERROR=%v\n", err)
 				return fmt.Errorf("EventRepo.DeleteEventByUserID: Failed to unmarshal entity: %w", err)
 			}
 		}
 	}
+	log.Printf("EVENT REPO - DELETE EVENT BY USER ID: SUCCESS\n")
 	return nil
 }
 
 // Remove Invitee from all Events in Events Table based on Invitee ID
 func (repo *EventRepository) RemoveInvitee(tableName string, userID string) error {
+	log.Printf("EVENT REPO - REMOVE INVITEE: CALLED WITH TABLENAME=%s ID=%s\n", tableName, userID)
 
 	tableClient := repo.serviceClient.NewClient(tableName)
 
@@ -281,6 +320,7 @@ func (repo *EventRepository) RemoveInvitee(tableName string, userID string) erro
 	for pager.More() {
 		response, err := pager.NextPage(context.Background())
 		if err != nil {
+			log.Printf("EVENT REPO - REMOVE INVITEE - LISTING EVENTS : FAILED: ERROR=%v\n", err)
 			return fmt.Errorf("EventRepo.DeleteEventByUserID: Failed to acquire next page: %w", err)
 		}
 		pageCount += 1
@@ -295,20 +335,24 @@ func (repo *EventRepository) RemoveInvitee(tableName string, userID string) erro
 
 				serEntity, err := json.Marshal(entityData)
 				if err != nil {
+					log.Printf("EVENT REPO - REMOVE INVITEE - MARSHALLING: FAILED: ERROR=%v\n", err)
 					return fmt.Errorf("EventRepo.RemoveInvitee: Failed to serialize event data: %w", err)
 				}
 				_, err = tableClient.UpdateEntity(context.Background(), serEntity, nil)
 				if err != nil {
+					log.Printf("EVENT REPO - REMOVE INVITEE - UPDATE ENTITY: FAILED: ERROR=%v\n", err)
 					return fmt.Errorf("EventRepo.RemoveInvitee: Failed to update entity in %s: %w", tableName, err)
 				}
 			}
 		}
 	}
+	log.Printf("EVENT REPO - REMOVE INVITEE: SUCCESS\n")
 	return nil
 }
 
 // Helper function to process CSV by removing specified token
 func (repo *EventRepository) stripInvitee(csv, toRemove string) string {
+	log.Printf("EVENT REPO - STRIP INVITEE: CALLED\n")
 	tokens := strings.Split(csv, ",")
 	filtered := make([]string, 0, len(tokens))
 	for _, p := range tokens {
@@ -316,5 +360,7 @@ func (repo *EventRepository) stripInvitee(csv, toRemove string) string {
 			filtered = append(filtered, p)
 		}
 	}
+
+	log.Printf("EVENT REPO - STRIP INVITEE: SUCCESS\n")
 	return strings.Join(filtered, ",")
 }

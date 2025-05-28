@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"strings"
 
@@ -15,10 +16,15 @@ const (
 	ContextUID   contextKey = "uid"
 	ContextEmail contextKey = "email"
 )
+
 func FirebaseAuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		log.Printf("DEBUG: IN AUTH")
 		authHeader := r.Header.Get("Authorization")
 		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
+
+			log.Printf("DEBUG: INVALID AUTH HEADER")
 			utils.RespondUnauthorized(w, "Missing or invalid Authorization header")
 			return
 		}
@@ -39,7 +45,7 @@ func FirebaseAuthMiddleware(next http.Handler) http.Handler {
 
 		ctx := context.WithValue(r.Context(), ContextUID, token.UID)
 		if email, ok := token.Claims["email"].(string); ok {
-		ctx = context.WithValue(ctx, ContextEmail, email)
+			ctx = context.WithValue(ctx, ContextEmail, email)
 		}
 		next.ServeHTTP(w, r.WithContext(ctx))
 

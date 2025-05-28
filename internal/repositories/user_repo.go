@@ -7,7 +7,10 @@ import (
 	"littleeinsteinchildcare/backend/internal/config"
 	"littleeinsteinchildcare/backend/internal/models"
 	"littleeinsteinchildcare/backend/internal/services"
+	"log"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/data/aztables"
 )
 
@@ -20,25 +23,31 @@ type UserRepository struct {
 
 // NewUserRepo creates and returns a new, unconnected UserRepo object
 func NewUserRepo(cfg config.AzTableConfig) (services.UserRepo, error) {
+	log.Printf("USER REPO - NEW USER REPO CALLED\n")
 	cred, err := aztables.NewSharedKeyCredential(cfg.AzureAccountName, cfg.AzureAccountKey)
 	if err != nil {
+		log.Printf("USER REPO - SHARED KEY CREDS FAILED: %v\n", err)
 		return nil, fmt.Errorf("UserRepository.NewUserRepo: Failed to create credentials: %w", err)
 	}
 	client, err := aztables.NewServiceClientWithSharedKey(cfg.AzureContainerName, cred, nil)
 	if err != nil {
+		log.Printf("USER REPO - NEW SERVICE CLIENT WITH SHARED KEY FAILED: %v\n", err)
 		return nil, fmt.Errorf("UserRepository.NewUserRepo: Failed to initialize service client: %w", err)
 	}
+	log.Printf("USER REPO - NEW USER REPO CALLED: SUCCESS\n")
 	return &UserRepository{serviceClient: *client}, nil
 }
 
 // GetUser retrieves and stores entity data in a User object
 func (repo *UserRepository) GetUser(tableName string, id string) (models.User, error) {
 
+	log.Printf("USER REPO - GET USER CALLED ON %s with ID=%s\n", tableName, id)
 	ctx := context.Background()
 	tableClient := repo.serviceClient.NewClient(tableName)
 
 	resp, err := tableClient.GetEntity(ctx, PartitionKey, id, nil)
 	if err != nil {
+		log.Printf("USER REPO - GET ENTITY: ERROR ON %s with ID=%s with error=%v\n", tableName, id, err)
 		return models.User{}, fmt.Errorf("UserRepository.GetUser: Failed to retrieve entity from %s: %w", tableName, err)
 	}
 
@@ -68,6 +77,8 @@ func (repo *UserRepository) GetUser(tableName string, id string) (models.User, e
 }
 
 func (repo *UserRepository) GetAllUsers(tableName string) ([]models.User, error) {
+	log.Printf("USER REPO - GET ALL USERS CALLED ON %s\n", tableName)
+
 	ctx := context.Background()
 	tableClient := repo.serviceClient.NewClient(tableName)
 	filter := "PartitionKey eq 'Users'"
@@ -76,11 +87,13 @@ func (repo *UserRepository) GetAllUsers(tableName string) ([]models.User, error)
 	}
 	var users []models.User
 
+	log.Printf("USER REPO - LISTING ENTITIES ON %s\n", tableName)
 	pager := tableClient.NewListEntitiesPager(options)
 	pageCount := 0
 	for pager.More() {
 		response, err := pager.NextPage(ctx)
 		if err != nil {
+			log.Printf("USER REPO - ERROR GETTING NEXT PAGE FROM PAGE %v\n", pageCount)
 			return []models.User{}, fmt.Errorf("UserRepository.GetAllUsers: Failed to acquire next page: %w", err)
 		}
 		pageCount += 1
@@ -91,12 +104,14 @@ func (repo *UserRepository) GetAllUsers(tableName string) ([]models.User, error)
 			if err != nil {
 				return []models.User{}, fmt.Errorf("UserRepositroy.GetAllUser: Failed to Unmarshal entity: %w", err)
 			}
+			log.Printf("USER REPO - GET ALL USERS: PACKAGING USER\n")
 			user := models.User{
 				ID:    myEntity.RowKey,
 				Name:  myEntity.Properties["Username"].(string),
 				Email: myEntity.Properties["Email"].(string),
 				Role:  myEntity.Properties["Role"].(string),
 			}
+			log.Printf("USER REPO - GET ALL USERS: PACKAGED USER WITHOUT IMAGES %v\n", user)
 
 			if entityImages, ok := myEntity.Properties["Images"]; ok {
 				if imagesString, ok := entityImages.(string); ok {
@@ -107,25 +122,30 @@ func (repo *UserRepository) GetAllUsers(tableName string) ([]models.User, error)
 					user.Images = images
 				}
 			}
+			log.Printf("USER REPO - GET ALL USERS: PACKAGED USER WITH IMAGES %v\n", user)
 
 			users = append(users, user)
 		}
 
 	}
+	log.Printf("USER REPO - GET ALL USERS: SUCCESS %v\n", users)
 	return users, nil
 
 }
 
 // CreateUser creates an aztable entity in the specified table name, creating the table if it doesn't exist
 func (repo *UserRepository) CreateUser(tableName string, user models.User) error {
+	log.Printf("USER REPO - CREATE USER: CALLED WITH TABLE=%s USER=%v\n", tableName, user)
 
 	var imagesStr string
 	if bytes, err := json.Marshal(user.Images); err == nil {
 		imagesStr = string(bytes)
 	} else {
+		log.Printf("USER REPO - CREATE USER: FAILED TO GET IMAGES STRING WITH TABLE=%s USER=%v ERROR=%v\n", tableName, user, err)
 		return err
 	}
 
+	log.Printf("USER REPO - CREATE USER: PACKAGING USER ENTITY\n")
 	//https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/sdk/data/aztables
 	userEntity := aztables.EDMEntity{
 		Entity: aztables.Entity{
@@ -140,17 +160,19 @@ func (repo *UserRepository) CreateUser(tableName string, user models.User) error
 		},
 	}
 
+	log.Printf("USER REPO - CREATE USER: PACKAGED USER ENTITY SUCCESSFULLY\n")
 	//https://pkg.go.dev/encoding/json
 	serializedEntity, err := json.Marshal(userEntity)
 	if err != nil {
 		return fmt.Errorf("UserRepository.CreateUser: Failed to serialize userEntity: %w", err)
 	}
 
-	//TODO: Better handling?
 	_, err = repo.serviceClient.CreateTable(context.Background(), tableName, nil)
+	log.Printf("USER REPO - CREATE USER: CREATE TABLE CHECK: ERROR=%v\n", err)
 	tableClient := repo.serviceClient.NewClient(tableName)
 	_, err = tableClient.AddEntity(context.Background(), serializedEntity, nil)
 	if err != nil {
+		log.Printf("USER REPO - CREATE USER: ADD ENTITY FAILED: ERROR=%v\n", err)
 		return fmt.Errorf("UserRepository.CreateUser: Failed to add entity to table %s: %w", tableName, err)
 	}
 	return nil
@@ -172,11 +194,13 @@ func updateImages(newUserData models.User, user models.User) []string {
 }
 
 func (repo *UserRepository) UpdateUser(tableName string, newUserData models.User) (models.User, error) {
+	log.Printf("USER REPO - UPDATE USER: CALLED WITH TABLE=%s NEWUSERDATA=%v\n", tableName, newUserData)
 	ctx := context.Background()
 	tableClient := repo.serviceClient.NewClient(tableName)
 
 	user, err := repo.GetUser(tableName, newUserData.ID)
 	if err != nil {
+		log.Printf("USER REPO - UPDATE USER: CALLED WITH TABLE=%s NEWUSERDATA=%v\n", tableName, newUserData)
 		return models.User{}, fmt.Errorf("UserRepository.UpdateUser: Failed to retrieve user ID %s from %s: %w", newUserData.ID, tableName, err)
 	}
 
@@ -184,8 +208,10 @@ func (repo *UserRepository) UpdateUser(tableName string, newUserData models.User
 		newUserData.Images = updateImages(newUserData, user)
 	}
 
+	log.Printf("USER REPO - CALLING USER.UPDATE NEWUSERDATA=%v\n", newUserData)
 	err = user.Update(newUserData)
 	if err != nil {
+		log.Printf("USER REPO - USER.UPDATE: FAILED: ERROR=%v\n", err)
 		return models.User{}, fmt.Errorf("UserRepository.UpdateUser: Failed to update user ID %s's fields: %w", user.ID, err)
 	}
 
@@ -193,9 +219,11 @@ func (repo *UserRepository) UpdateUser(tableName string, newUserData models.User
 	if bytes, err := json.Marshal(user.Images); err == nil {
 		imagesStr = string(bytes)
 	} else {
+		log.Printf("USER REPO - UPDATE USER : FAILED: ERROR=%v\n", err)
 		return models.User{}, err
 	}
 
+	log.Printf("USER REPO - PACKAGING USER: USER=%v IMAGESSTR=%v\n", user, imagesStr)
 	userEntity := aztables.EDMEntity{
 		Entity: aztables.Entity{
 			PartitionKey: PartitionKey,
@@ -208,6 +236,7 @@ func (repo *UserRepository) UpdateUser(tableName string, newUserData models.User
 			"Images":   imagesStr,
 		},
 	}
+	log.Printf("USER REPO - PACKAGED USER SUCCESS\n")
 
 	serializedEntity, err := json.Marshal(userEntity)
 	if err != nil {
@@ -215,20 +244,30 @@ func (repo *UserRepository) UpdateUser(tableName string, newUserData models.User
 	}
 	_, err = tableClient.UpdateEntity(ctx, serializedEntity, nil)
 	if err != nil {
+		log.Printf("USER REPO - UPDATE ENTITY : FAILED: ERROR=%v\n", err)
 		return models.User{}, fmt.Errorf("UserRepository.UpdateEntity: Failed to update entity in %s: %w", tableName, err)
 	}
 
+	log.Printf("USER REPO - UPDATE USER : SUCCESS: USER=%v \n", user)
 	return user, nil
 }
 
 func (repo *UserRepository) DeleteUser(tableName string, id string) error {
+	log.Printf("DEBUG: USER REPO - DELETE USER: CALLED\n")
 	ctx := context.Background()
 	tableClient := repo.serviceClient.NewClient(tableName)
+	log.Printf("DEBUG: USER REPO - CALLING AZTABLES DELETE ENTITY\n")
 
-	_, err := tableClient.DeleteEntity(ctx, PartitionKey, id, nil)
+	options := &aztables.DeleteEntityOptions{
+		IfMatch: to.Ptr(azcore.ETagAny),
+	}
+	_, err := tableClient.DeleteEntity(ctx, PartitionKey, id, options)
+	log.Printf("DEBUG: USER REPO - DELETE ENTITY RETURNED\n")
 	if err != nil {
+		log.Printf("DEBUG: USER REPO - DELETE ENTITY RETURNED: FAILURE: ID: %s TABLENAME: %s ERROR %s\n", id, tableName, err)
 		return fmt.Errorf("UserRepository.DeleteUser: Failed to delete entity with ID %s from %s: %w", id, tableName, err)
 	}
+	log.Printf("DEBUG: USER REPO - DELETE ENTITY RETURNED: SUCCESS\n")
 
 	return nil
 }
