@@ -9,6 +9,8 @@ import (
 	"littleeinsteinchildcare/backend/internal/services"
 	"strings"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/data/aztables"
 )
 
@@ -231,7 +233,11 @@ func (repo *EventRepository) DeleteEvent(tableName string, id string) error {
 	ctx := context.Background()
 	tableClient := repo.serviceClient.NewClient(tableName)
 
-	_, err := tableClient.DeleteEntity(ctx, PKey, id, nil)
+	options := &aztables.DeleteEntityOptions{
+		IfMatch: to.Ptr(azcore.ETagAny),
+	}
+
+	_, err := tableClient.DeleteEntity(ctx, PKey, id, options)
 	if err != nil {
 		return fmt.Errorf("EventRepo.DeleteEvent: Failed to delete entity in %s: %w", tableName, err)
 	}
