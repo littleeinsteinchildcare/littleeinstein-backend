@@ -219,7 +219,7 @@ func (repo *UserRepository) UpdateUser(tableName string, newUserData models.User
 	if bytes, err := json.Marshal(user.Images); err == nil {
 		imagesStr = string(bytes)
 	} else {
-		log.Printf("USER REPO - UPDATE USER : FAILED: ERROR=%v\n", err)
+		log.Printf("USER REPO - UPDATE USER : FAILED: ERROR=%v", err)
 		return models.User{}, err
 	}
 
@@ -253,10 +253,12 @@ func (repo *UserRepository) UpdateUser(tableName string, newUserData models.User
 }
 
 func (repo *UserRepository) DeleteUser(tableName string, id string) error {
-	log.Printf("DEBUG: USER REPO - DELETE USER: CALLED\n")
+	log.Printf("DEBUG: USER REPO - DELETE USER: CALLED")
+	fmt.Printf("DEBUG: USER REPO - DELETE USER: CALLED")
+	fmt.Println("DEBUG: USER REPO - DELETE USER: CALLED")
 	ctx := context.Background()
 	tableClient := repo.serviceClient.NewClient(tableName)
-	log.Printf("DEBUG: USER REPO - CALLING AZTABLES DELETE ENTITY\n")
+	log.Printf("DEBUG: USER REPO - CALLING AZTABLES DELETE ENTITY")
 
 	options := &aztables.DeleteEntityOptions{
 		IfMatch: to.Ptr(azcore.ETagAny),

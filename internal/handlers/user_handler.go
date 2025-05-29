@@ -38,6 +38,11 @@ func NewUserHandler(s UserService) *UserHandler {
 
 // GetUser handles GET requests for a specific user
 func (h *UserHandler) GetUser(w http.ResponseWriter, r *http.Request) {
+	log.Printf("USER HANDLER LOG PRINTF")
+	log.Printf("USER HANDLER LOG PRINTF WITH NEWLINE\n")
+	fmt.Printf("DEBUG: USER HANDLER FMT.PRINTF")
+	fmt.Printf("DEBUG: USER HANDLER FMT.PRINTF WITH NEWLINE\n")
+
 	// Extract ID from request
 	id := r.PathValue("id")
 
@@ -106,6 +111,11 @@ func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 
 // DeleteUser handles DELETE requests to remove an existing user
 func (h *UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
+	log.Printf("USER HANDLER DELETE LOG PRINTF")
+	log.Printf("USER HANDLER DELETE LOG PRINTF WITH NEWLINE\n")
+	fmt.Printf("DEBUG: USER DELETE HANDLER FMT.PRINTF")
+	fmt.Printf("DEBUG: USER DELETE HANDLER FMT.PRINTF WITH NEWLINE\n")
+
 	id := r.PathValue("id")
 	log.Printf("DEBUG: CALLING DELETE USER IN USERHANDLER")
 	err := h.userService.DeleteUserByID(id)

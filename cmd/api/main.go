@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
-	"github.com/joho/godotenv"
 	"log"
 	"net/http"
 	"os"
+
+	"github.com/joho/godotenv"
 
 	"littleeinsteinchildcare/backend/internal/api/middleware"
 	"littleeinsteinchildcare/backend/internal/api/routes"
@@ -61,6 +62,10 @@ func main() {
 	}
 
 	log.Printf("API Server running on http://localhost:%d", cfg.Port)
+	log.Printf("LOG PRINTF")
+	log.Printf("LOG PRINTF WITH NEWLINE\n")
+	fmt.Printf("DEBUG: FMT.PRINTF")
+	fmt.Printf("DEBUG: FMT.PRINTF WITH NEWLINE\n")
 
 	// Server initialization with fatal error handling
 	if err := server.ListenAndServe(); err != nil {

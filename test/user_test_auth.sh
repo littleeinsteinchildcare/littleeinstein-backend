@@ -51,6 +51,7 @@ setup(){
     fi
     if [[ "$PROD" = true ]]; then
         BACKEND_URL="https://lec-api-backend.azurewebsites.net"
+        echo "BACKEND URL: $BACKEND_URL"
     fi
 }
 
@@ -158,6 +159,8 @@ test_delete(){
     CURL_CMD="curl -s -w 'HTTPSTATUS:%{http_code}' -X DELETE \
     -H 'Authorization: Bearer $idToken' \
     $BACKEND_URL/$ENDPOINT"
+
+    echo "DELETING FROM $BACKEND_URL"
 	run_test "DELETE Test <No Content: User $i>" 204
 }
 

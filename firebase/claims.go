@@ -2,8 +2,8 @@ package firebase
 
 import (
 	"context"
-	"log"
 	"fmt"
+	"log"
 
 	firebase "firebase.google.com/go/v4"
 	"google.golang.org/api/iterator"
