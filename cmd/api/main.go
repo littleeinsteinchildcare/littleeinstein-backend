@@ -22,6 +22,7 @@ func main() {
 
 	log.Print("\n EEEEEEEEEAEEEEEEEEEEEEEEEEEEEEEEE \n ")
 
+
 	// Check APP_ENV after potentially loading it from .env
 	fmt.Print("App Environment Configuration: ")
 	switch environment := os.Getenv("APP_ENV"); environment {
