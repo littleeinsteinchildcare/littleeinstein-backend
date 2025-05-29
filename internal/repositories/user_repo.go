@@ -8,6 +8,8 @@ import (
 	"littleeinsteinchildcare/backend/internal/models"
 	"littleeinsteinchildcare/backend/internal/services"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/data/aztables"
 )
 
@@ -225,7 +227,10 @@ func (repo *UserRepository) DeleteUser(tableName string, id string) error {
 	ctx := context.Background()
 	tableClient := repo.serviceClient.NewClient(tableName)
 
-	_, err := tableClient.DeleteEntity(ctx, PartitionKey, id, nil)
+	options := &aztables.DeleteEntityOptions{
+		IfMatch: to.Ptr(azcore.ETagAny),
+	}
+	_, err := tableClient.DeleteEntity(ctx, PartitionKey, id, options)
 	if err != nil {
 		return fmt.Errorf("UserRepository.DeleteUser: Failed to delete entity with ID %s from %s: %w", id, tableName, err)
 	}
