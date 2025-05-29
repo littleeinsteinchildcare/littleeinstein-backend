@@ -20,6 +20,8 @@ func main() {
 	// Load .env file, ignoring any errors
 	_ = godotenv.Load()
 
+	log.Print("\n DAEURRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR \n ")
+
 	// Check APP_ENV after potentially loading it from .env
 	fmt.Print("App Environment Configuration: ")
 	switch environment := os.Getenv("APP_ENV"); environment {
