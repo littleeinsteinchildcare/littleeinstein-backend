@@ -1,5 +1,5 @@
-# Build and Push Little Einstein Backend API Image
-name: Build API Image
+# Build and Push Little Einstein Backend API Image + Deploy to Azure
+name: Build API Image and Deploy
 
 # Trigger on main branch commits and manual runs
 on:
@@ -11,6 +11,7 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: api-image
+  AZURE_WEBAPP_NAME: LEC-api-backend  # Your Azure App Service name
 
 jobs:
   build-and-push:
@@ -86,11 +87,25 @@ jobs:
             VCS_REF=${{ github.sha }}
             VERSION=build-${{ github.run_number }}
 
+      # Login to Azure using Service Principal
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # Deploy to Azure App Service
+      - name: Deploy to Azure App Service
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:latest
+
       # Create build summary
       - name: Generate build summary
         run: |
-          echo "## 🚀 API Build Complete!" >> $GITHUB_STEP_SUMMARY
+          echo "## 🚀 API Build & Deploy Complete!" >> $GITHUB_STEP_SUMMARY
           echo "**Build:** #${{ github.run_number }} | **Time:** ${{ steps.timestamp.outputs.value }} | **Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Deployed to:** ${{ env.AZURE_WEBAPP_NAME }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Available Tags:" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
