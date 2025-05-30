@@ -123,12 +123,14 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 
 	// Extract user info from middleware
 	uid, ok := utils.GetContextString(ctx, common.ContextUID)
+
 	if !ok {
 		http.Error(w, "Unauthorized: missing UID in context", http.StatusUnauthorized)
 		return
 	}
 
 	email, ok := utils.GetContextString(ctx, common.ContextEmail)
+
 	if !ok {
 		http.Error(w, "Unauthorized: missing Email in context", http.StatusUnauthorized)
 		return

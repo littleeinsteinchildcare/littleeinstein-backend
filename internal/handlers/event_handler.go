@@ -321,7 +321,9 @@ func buildEventResponse(event models.Event) map[string]interface{} {
 }
 
 func (h *EventHandler) TestConnection(w http.ResponseWriter, r *http.Request) {
+
 	uid, ok := r.Context().Value(common.ContextUID).(string)
+
 	if !ok {
 		http.Error(w, "UID missing in context", http.StatusInternalServerError)
 		return
