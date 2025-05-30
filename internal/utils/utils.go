@@ -36,12 +36,20 @@ func WriteJSONError(w http.ResponseWriter, status int, msg string, err error) {
 }
 
 func GetUserIDFromAuth(r *http.Request) (string, error) {
-	//TODO! - Implement real auth grab (remove r from arguments, pass in context
-	userID := r.Header.Get("X-User-ID")
-	if userID == "" {
-		return "", errors.New("request Header is missing required field: X-User-ID")
+	ctx := r.Context()
+
+	type contextKey string
+	var contextUID contextKey = "uid"
+
+	// Extract user info from middleware
+	uid, ok := GetContextString(ctx, contextUID)
+	log.Printf("UID: %s\n", uid)
+
+	if !ok {
+		return "", errors.New("Unauthorized: missing UID in context")
 	}
-	return userID, nil
+
+	return uid, nil
 }
 
 func RespondUnauthorized(w http.ResponseWriter, message string) {

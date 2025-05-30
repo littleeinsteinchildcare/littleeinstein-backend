@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"littleeinsteinchildcare/backend/internal/api/middleware"
 	"littleeinsteinchildcare/backend/internal/models"
 	"littleeinsteinchildcare/backend/internal/utils"
 	"net/http"
 	"strings"
-	"littleeinsteinchildcare/backend/internal/api/middleware"
 )
 
 // EventService interface implemented in services package
@@ -78,6 +78,10 @@ func (h *EventHandler) CreateEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	creatorID, err := utils.GetUserIDFromAuth(r)
+	if err != nil {
+		utils.WriteJSONError(w, http.StatusUnauthorized, "EventHandler.CreateEvent: Failed to get User ID", err)
+		return
+	}
 	// creator, err := h.userService.GetUserByID(eventData["creator"].(string))
 	creator, err := h.userService.GetUserByID(creatorID)
 	if err != nil {

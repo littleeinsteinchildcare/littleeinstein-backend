@@ -116,6 +116,8 @@ create_firebase_users(){
         -H 'Authorization: Bearer $idToken' \
 		-d '{\"eventname\":\"Event $i\", \"date\":\"1/$i/2025\",\"id\":\"$creator\", \"starttime\":\"$i:00am\",\"endtime\":\"$i:00pm\", \"invitees\":\"$inv1, $inv2\"}' \
         $BACKEND_URL/$ENDPOINT"
+
+        echo "CURL -- $CURL_CMD"
 		run_test "POST test < Create New Entity: Event $i -- Creator: $creator >" 201
 
     done
@@ -197,7 +199,7 @@ test_get(){
 
 }
 
-test_delete(){
+delete_backend_user(){
     idToken=$1
     i=$2
     uid=$3
