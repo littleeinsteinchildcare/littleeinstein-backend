@@ -32,21 +32,36 @@ func LoadBlobConfig() (*BlobConfig, error) {
 
 	var config BlobConfig
 	// Load from environment variables if available
-	if os.Getenv("PORT") != "" {
-		config.Port = os.Getenv("PORT")
-	}
-	if os.Getenv("AZURE_STORAGE_ACCOUNT_NAME") != "" {
+	//if os.Getenv("PORT") != "" {
+	//	config.Port = os.Getenv("PORT")
+	//}
+	//if os.Getenv("AZURE_STORAGE_ACCOUNT_NAME") != "" {
+	//	config.AzureAccountName = os.Getenv("AZURE_STORAGE_ACCOUNT_NAME")
+	//}
+	//if os.Getenv("AZURE_STORAGE_ACCOUNT_KEY") != "" {
+	//	config.AzureAccountKey = os.Getenv("AZURE_STORAGE_ACCOUNT_KEY")
+	//}
+	//if os.Getenv("AZURE_BLOB_SERVICE_URL") != "" {
+	//	config.AzureServiceURL = os.Getenv("AZURE_BLOB_SERVICE_URL")
+	//}
+	//if os.Getenv("AZURE_BLOB_CONTAINER_NAME") != "" {
+	//	config.AzureContainerName = os.Getenv("AZURE_BLOB_CONTAINER_NAME")
+	//}
+
+	appEnv := os.Getenv("APP_ENV")
+
+	if appEnv == "development" {
+		config.AzureAccountName = os.Getenv("LOCAL_AZURE_STORAGE_ACCOUNT_NAME")
+		config.AzureAccountKey = os.Getenv("LOCAL_AZURE_STORAGE_ACCOUNT_KEY")
+		config.AzureServiceURL = os.Getenv("LOCAL_AZURE_BLOB_SERVICE_URL")
+	} else {
 		config.AzureAccountName = os.Getenv("AZURE_STORAGE_ACCOUNT_NAME")
-	}
-	if os.Getenv("AZURE_STORAGE_ACCOUNT_KEY") != "" {
 		config.AzureAccountKey = os.Getenv("AZURE_STORAGE_ACCOUNT_KEY")
-	}
-	if os.Getenv("AZURE_BLOB_SERVICE_URL") != "" {
 		config.AzureServiceURL = os.Getenv("AZURE_BLOB_SERVICE_URL")
 	}
-	if os.Getenv("AZURE_BLOB_CONTAINER_NAME") != "" {
-		config.AzureContainerName = os.Getenv("AZURE_BLOB_CONTAINER_NAME")
-	}
+
+	// Common across all envs
+	config.AzureContainerName = os.Getenv("AZURE_BLOB_CONTAINER_NAME")
 
 	// Set default port if not specified
 	if config.Port == "" {
