@@ -1,0 +1,97 @@
+# Build and Push Little Einstein Backend API Image
+name: Build API Image
+
+# Trigger on main branch commits and manual runs
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/api-image
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Download repository code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Setup Docker with advanced build features
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Login to Docker Hub
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # Generate current timestamp for tagging
+      - name: Generate timestamp
+        id: timestamp
+        run: echo "value=$(date -u +'%Y%m%d-%H%M%S')" >> $GITHUB_OUTPUT
+
+      # Generate image tags and metadata
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            # Latest tag for any build
+            type=raw,value=latest
+            # Timestamp when build actually runs
+            type=raw,value=${{ steps.timestamp.outputs.value }}
+            # Git commit SHA for tracking
+            type=sha,prefix=main-,format=short
+            # Build number for CI/CD tracking
+            type=raw,value=build-${{ github.run_number }}
+          labels: |
+            org.opencontainers.image.title=Little Einstein Backend API
+            org.opencontainers.image.description=Backend API for Little Einstein Childcare
+            org.opencontainers.image.vendor=Little Einstein Childcare
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            build.triggered-by=${{ github.actor }}
+            build.timestamp=${{ steps.timestamp.outputs.value }}
+            build.run-number=${{ github.run_number }}
+            git.commit=${{ github.sha }}
+            git.branch=${{ github.ref_name }}
+
+      # Build & push Docker image
+      - name: Build and push Docker image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/amd64  # Azure App Service architecture
+          cache-from: type=gha     # Use GitHub Actions cache for faster builds
+          cache-to: type=gha,mode=max
+          build-args: |
+            BUILD_DATE=${{ steps.timestamp.outputs.value }}
+            VCS_REF=${{ github.sha }}
+            VERSION=build-${{ github.run_number }}
+
+      # Create build summary
+      - name: Generate build summary
+        run: |
+          echo "## 🚀 API Build Complete!" >> $GITHUB_STEP_SUMMARY
+          echo "**Build:** #${{ github.run_number }} | **Time:** ${{ steps.timestamp.outputs.value }} | **Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Available Tags:" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Deploy Command:" >> $GITHUB_STEP_SUMMARY
+          echo '```bash' >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ${{ env.IMAGE_NAME }}:latest" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
