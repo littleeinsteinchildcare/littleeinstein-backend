@@ -43,7 +43,7 @@ func NewBlobStorageService(accountName, accountKey, containerName string) (*Blob
 	case "development":
 		//fmt.Printf("DEVELOPMENT\n")
 		// Use environment variable if set, otherwise default to localhost
-		blobServiceURL := os.Getenv("AZURE_BLOB_SERVICE_URL")
+		blobServiceURL := os.Getenv("LOCAL_AZURE_BLOB_SERVICE_URL")
 		if blobServiceURL == "" {
 			blobServiceURL = "http://127.0.0.1:10000"
 		}
@@ -75,8 +75,8 @@ func NewBlobStorageService(accountName, accountKey, containerName string) (*Blob
 					log.Printf("Container '%s' already exists (HTTP 409), continuing...", containerName)
 					err = nil
 				}
-			} else if strings.Contains(errStr, "400 Bad Request") || 
-					  strings.Contains(errStr, "ContainerAlreadyExists") {
+			} else if strings.Contains(errStr, "400 Bad Request") ||
+				strings.Contains(errStr, "ContainerAlreadyExists") {
 				log.Printf("Container '%s' creation returned 400/already exists error, continuing...", containerName)
 				err = nil
 			}
