@@ -20,7 +20,7 @@ func main() {
 	// Load .env file, ignoring any errors
 	_ = godotenv.Load()
 
-	log.Print("\n V5v5v5v5v5 \n ")
+	log.Print("\n   ------ VERSION: 1 ------   \n ")
 
 	// Check APP_ENV after potentially loading it from .env
 	fmt.Print("App Environment Configuration: ")
