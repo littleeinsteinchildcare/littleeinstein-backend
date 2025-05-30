@@ -171,6 +171,20 @@ func updateImages(newUserData models.User, user models.User) []string {
 	return uniqueList
 }
 
+func (repo *UserRepository) UpsertUser(tableName string, user models.User) error {
+	// Try update
+	_, err := repo.UpdateUser(tableName, user)
+	if err != nil {
+		// If update fails (user not found), fall back to create
+		createErr := repo.CreateUser(tableName, user)
+		if createErr != nil {
+			return fmt.Errorf("UserRepository.UpsertUser: Failed to create new user: %w", createErr)
+		}
+	}
+	return nil
+}
+
+
 func (repo *UserRepository) UpdateUser(tableName string, newUserData models.User) (models.User, error) {
 	ctx := context.Background()
 	tableClient := repo.serviceClient.NewClient(tableName)

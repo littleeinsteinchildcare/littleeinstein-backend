@@ -13,6 +13,8 @@ type UserRepo interface {
 	GetAllUsers(tableName string) ([]models.User, error)
 	DeleteUser(tableName string, id string) error
 	UpdateUser(tableName string, user models.User) (models.User, error)
+	UpsertUser(tableName string, user models.User) error
+
 }
 
 // UserService contains and handles a specific UserRepository object
