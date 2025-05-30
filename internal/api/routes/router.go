@@ -2,7 +2,6 @@ package routes
 
 import (
 	"encoding/json"
-	"fmt"
 	"littleeinsteinchildcare/backend/internal/config"
 	"littleeinsteinchildcare/backend/internal/handlers"
 	"littleeinsteinchildcare/backend/internal/repositories"
@@ -44,13 +43,15 @@ func SetupRouter() *http.ServeMux {
 	}
 
 	blobConfig, err := config.LoadBlobConfig()
+	if err != nil {
+		log.Fatalf("Router.SetupRouter: Failed to load blob config: %v", err)
+	}
+	
 	blobRepo, err := repositories.NewBlobStorageService(blobConfig.AzureAccountName, blobConfig.AzureAccountKey, blobConfig.AzureContainerName)
 	if err != nil {
-		fmt.Printf("ERROR CREATING BLOB SERVICE: %v\n", err)
-		fmt.Printf("ACCOUNT NAME: %s\n", blobConfig.AzureAccountName)
-		fmt.Printf("ACCOUNT KEY: %s\n", blobConfig.AzureAccountKey)
-		fmt.Printf("ACCOUNT KEY: %s\n", blobConfig.AzureContainerName)
+		log.Fatalf("Router.SetupRouter: Failed to create blob repository: %v", err)
 	}
+	
 	blobService := services.NewBlobService(blobRepo)
 	// Create user service with repository dependency
 	// This service will handle business logic for user operations

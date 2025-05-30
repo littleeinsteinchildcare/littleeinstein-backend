@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"io"
 	"littleeinsteinchildcare/backend/firebase"
-	"littleeinsteinchildcare/backend/internal/api/middleware"
+	"littleeinsteinchildcare/backend/internal/common"
 	"littleeinsteinchildcare/backend/internal/models"
 	"littleeinsteinchildcare/backend/internal/utils"
 	"net/http"
@@ -122,13 +122,13 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	// Extract user info from middleware
-	uid, ok := utils.GetContextString(ctx, middleware.ContextUID)
+	uid, ok := utils.GetContextString(ctx, common.ContextUID)
 	if !ok {
 		http.Error(w, "Unauthorized: missing UID in context", http.StatusUnauthorized)
 		return
 	}
 
-	email, ok := utils.GetContextString(ctx, middleware.ContextEmail)
+	email, ok := utils.GetContextString(ctx, common.ContextEmail)
 	if !ok {
 		http.Error(w, "Unauthorized: missing Email in context", http.StatusUnauthorized)
 		return
@@ -200,6 +200,66 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	response := buildUserResponse(user)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(response)
+}
+
+// SyncFirebaseUser handles POST requests to sync Firebase users with backend database
+func (h *UserHandler) SyncFirebaseUser(w http.ResponseWriter, r *http.Request) {
+	userData, err := utils.DecodeJSONRequest(r)
+	if err != nil {
+		utils.WriteJSONError(w, http.StatusBadRequest, "UserHandler.SyncFirebaseUser: Failed to decode JSON request", err)
+		return
+	}
+
+	// Extract Firebase user data
+	uid, ok := userData["uid"].(string)
+	if !ok {
+		utils.WriteJSONError(w, http.StatusBadRequest, "UserHandler.SyncFirebaseUser: Missing or invalid uid", nil)
+		return
+	}
+
+	email, ok := userData["email"].(string)
+	if !ok {
+		utils.WriteJSONError(w, http.StatusBadRequest, "UserHandler.SyncFirebaseUser: Missing or invalid email", nil)
+		return
+	}
+
+	name, ok := userData["name"].(string)
+	if !ok {
+		name = userData["displayName"].(string) // Fallback to displayName
+		if name == "" {
+			name = "User" // Default name
+		}
+	}
+
+	// Check if user already exists
+	existingUser, err := h.userService.GetUserByID(uid)
+	if err == nil {
+		// User exists, return existing user
+		response := buildUserResponse(existingUser)
+		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	// User doesn't exist, create new user
+	user := models.User{
+		ID:    uid,
+		Name:  name,
+		Email: email,
+		Role:  "parent", // Default role for Firebase users
+	}
+
+	err = h.userService.CreateUser(user)
+	if err != nil {
+		utils.WriteJSONError(w, http.StatusConflict, "UserHandler.SyncFirebaseUser: Failed to create user", err)
+		return
+	}
+
+	response := buildUserResponse(user)
+	w.WriteHeader(http.StatusCreated)
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
 }
 

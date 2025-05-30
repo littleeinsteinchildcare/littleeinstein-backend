@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"littleeinsteinchildcare/backend/internal/config"
 	"littleeinsteinchildcare/backend/internal/models"
 	"littleeinsteinchildcare/backend/internal/services"
+	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
@@ -35,12 +37,15 @@ func NewUserRepo(cfg config.AzTableConfig) (services.UserRepo, error) {
 
 // GetUser retrieves and stores entity data in a User object
 func (repo *UserRepository) GetUser(tableName string, id string) (models.User, error) {
+	log.Printf("DEBUG: UserRepository.GetUser called with tableName: '%s', id: '%s'", tableName, id)
 
 	ctx := context.Background()
 	tableClient := repo.serviceClient.NewClient(tableName)
 
+	log.Printf("DEBUG: About to call tableClient.GetEntity with PartitionKey: '%s', RowKey: '%s'", PartitionKey, id)
 	resp, err := tableClient.GetEntity(ctx, PartitionKey, id, nil)
 	if err != nil {
+		log.Printf("DEBUG: tableClient.GetEntity failed: %v", err)
 		return models.User{}, fmt.Errorf("UserRepository.GetUser: Failed to retrieve entity from %s: %w", tableName, err)
 	}
 
@@ -83,6 +88,12 @@ func (repo *UserRepository) GetAllUsers(tableName string) ([]models.User, error)
 	for pager.More() {
 		response, err := pager.NextPage(ctx)
 		if err != nil {
+			// If table doesn't exist, return empty array instead of error
+			// Azure returns "TableNotFound" error code when table doesn't exist
+			errMsg := err.Error()
+			if strings.Contains(errMsg, "TableNotFound") {
+				return []models.User{}, nil
+			}
 			return []models.User{}, fmt.Errorf("UserRepository.GetAllUsers: Failed to acquire next page: %w", err)
 		}
 		pageCount += 1

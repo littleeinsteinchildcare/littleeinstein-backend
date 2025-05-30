@@ -69,29 +69,68 @@ func (s *EventService) GetAllEvents() ([]models.Event, error) {
 			return nil, fmt.Errorf("Failed to get Creator %s: %w", r.CreatorID, err)
 		}
 
-		invitee_ids := strings.Split(r.InviteeIDs, ",")
-		invitees := make([]models.User, 0, len(invitee_ids))
-		for _, id := range invitee_ids {
-			u, err := getUser(id)
-			if err != nil {
-				return nil, fmt.Errorf("Failed to get invitee %s: %w", id, err)
+		var invitees []models.User
+		if r.InviteeIDs != "" {
+			invitee_ids := strings.Split(r.InviteeIDs, ",")
+			invitees = make([]models.User, 0, len(invitee_ids))
+			for _, id := range invitee_ids {
+				id = strings.TrimSpace(id)
+				if id == "" {
+					continue // Skip empty IDs
+				}
+				u, err := getUser(id)
+				if err != nil {
+					return nil, fmt.Errorf("Failed to get invitee %s: %w", id, err)
+				}
+				invitees = append(invitees, u)
 			}
-			invitees = append(invitees, u)
+		} else {
+			invitees = []models.User{} // Empty array for no invitees
 		}
 
 		// Build list of all events in table
 		events = append(events, models.Event{
-			ID:        r.RowKey,
-			EventName: r.EventName,
-			Date:      r.Date,
-			StartTime: r.StartTime,
-			EndTime:   r.EndTime,
-			Creator:   creator,
-			Invitees:  invitees,
+			ID:          r.RowKey,
+			EventName:   r.EventName,
+			Date:        r.Date,
+			StartTime:   r.StartTime,
+			EndTime:     r.EndTime,
+			Location:    r.Location,
+			Description: r.Description,
+			Color:       r.Color,
+			Creator:     creator,
+			Invitees:    invitees,
 		})
 	}
 
 	return events, nil
+}
+
+// GetEventsByUser returns events where the user is either creator or invitee
+func (s *EventService) GetEventsByUser(userId string) ([]models.Event, error) {
+	allEvents, err := s.GetAllEvents()
+	if err != nil {
+		return []models.Event{}, err
+	}
+	
+	var userEvents []models.Event
+	for _, event := range allEvents {
+		// Check if user is creator
+		if event.Creator.ID == userId {
+			userEvents = append(userEvents, event)
+			continue
+		}
+		
+		// Check if user is in invitees
+		for _, invitee := range event.Invitees {
+			if invitee.ID == userId {
+				userEvents = append(userEvents, event)
+				break
+			}
+		}
+	}
+	
+	return userEvents, nil
 }
 
 // CreateEvent returns an error on a failed EventRepo call

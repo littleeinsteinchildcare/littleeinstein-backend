@@ -6,6 +6,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"littleeinsteinchildcare/backend/internal/common"
 )
 
 type ContextKey interface{}
@@ -36,12 +37,12 @@ func WriteJSONError(w http.ResponseWriter, status int, msg string, err error) {
 }
 
 func GetUserIDFromAuth(r *http.Request) (string, error) {
-	//TODO! - Implement real auth grab (remove r from arguments, pass in context
-	userID := r.Header.Get("X-User-ID")
-	if userID == "" {
-		return "", errors.New("request Header is missing required field: X-User-ID")
+	// Get UID from Firebase auth context set by middleware
+	uid, ok := r.Context().Value(common.ContextUID).(string)
+	if !ok || uid == "" {
+		return "", errors.New("User ID not found in context - authentication required")
 	}
-	return userID, nil
+	return uid, nil
 }
 
 func RespondUnauthorized(w http.ResponseWriter, message string) {
