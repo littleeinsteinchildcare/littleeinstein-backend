@@ -43,7 +43,7 @@ func NewBlobStorageService(accountName, accountKey, containerName string) (*Blob
 	case "development":
 		//fmt.Printf("DEVELOPMENT\n")
 		// Use environment variable if set, otherwise default to localhost
-		blobServiceURL := os.Getenv("AZURE_BLOB_SERVICE_URL")
+		blobServiceURL := os.Getenv("LOCAL_AZURE_BLOB_SERVICE_URL")
 		if blobServiceURL == "" {
 			blobServiceURL = "http://127.0.0.1:10000"
 		}
