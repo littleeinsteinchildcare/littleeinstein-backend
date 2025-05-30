@@ -3,16 +3,12 @@ module littleeinsteinchildcare/backend
 go 1.24.1
 
 require (
-	github.com/Azure/azure-pipeline-go v0.2.3 // indirect
-	github.com/Azure/azure-sdk-for-go/sdk/data/aztables v1.3.0
-	github.com/joho/godotenv v1.5.1
-)
-
-require (
 	cloud.google.com/go/firestore v1.18.0
 	firebase.google.com/go/v4 v4.15.2
+	github.com/Azure/azure-sdk-for-go/sdk/data/aztables v1.3.0
 	github.com/Azure/azure-storage-blob-go v0.15.0
 	github.com/sendgrid/sendgrid-go v3.16.0+incompatible
+	github.com/joho/godotenv v1.5.1
 	google.golang.org/api v0.215.0
 )
 
@@ -26,6 +22,7 @@ require (
 	cloud.google.com/go/longrunning v0.6.2 // indirect
 	cloud.google.com/go/monitoring v1.21.2 // indirect
 	cloud.google.com/go/storage v1.49.0 // indirect
+	github.com/Azure/azure-pipeline-go v0.2.3 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.16.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/internal v1.10.0 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp v1.25.0 // indirect

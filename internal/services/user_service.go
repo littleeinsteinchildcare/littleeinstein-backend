@@ -1,6 +1,7 @@
 package services
 
 import (
+	"log"
 	"littleeinsteinchildcare/backend/internal/models"
 )
 
@@ -29,10 +30,13 @@ func NewUserService(r UserRepo, e EventRepo, b BlobRepo) *UserService {
 
 // GetUserByID handles calling the UserRepository GetUser function and returns the result of a query by the UserRepository
 func (s *UserService) GetUserByID(id string) (models.User, error) {
+	log.Printf("DEBUG: UserService.GetUserByID called with id: '%s'", id)
 	user, err := s.repo.GetUser(USERSTABLE, id)
 	if err != nil {
+		log.Printf("DEBUG: UserService.GetUserByID repo.GetUser failed: %v", err)
 		return models.User{}, err
 	}
+	log.Printf("DEBUG: UserService.GetUserByID success: %+v", user)
 	return user, nil
 }
 

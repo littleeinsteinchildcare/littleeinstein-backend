@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/url"
 	"os"
+	"strings"
 	"time"
 
 	"littleeinsteinchildcare/backend/internal/config"
@@ -41,8 +42,12 @@ func NewBlobStorageService(accountName, accountKey, containerName string) (*Blob
 		containerURLStr = fmt.Sprintf("https://%s.blob.core.windows.net/%s", accountName, containerName)
 	case "development":
 		//fmt.Printf("DEVELOPMENT\n")
-		// containerURLStr = fmt.Sprintf("http://127.0.0.1:10000/%s/%s", accountName, containerName)
-		containerURLStr = fmt.Sprintf("http://host.docker.internal:10000/%s/%s", accountName, containerName)
+		// Use environment variable if set, otherwise default to localhost
+		blobServiceURL := os.Getenv("AZURE_BLOB_SERVICE_URL")
+		if blobServiceURL == "" {
+			blobServiceURL = "http://127.0.0.1:10000"
+		}
+		containerURLStr = fmt.Sprintf("%s/%s/%s", blobServiceURL, accountName, containerName)
 	}
 
 	URL, _ := url.Parse(containerURLStr)
@@ -58,12 +63,29 @@ func NewBlobStorageService(accountName, accountKey, containerName string) (*Blob
 		// If the container already exists, continue
 		if serr, ok := err.(azblob.StorageError); ok {
 			if serr.ServiceCode() == azblob.ServiceCodeContainerAlreadyExists {
+				log.Printf("Container '%s' already exists, continuing...", containerName)
+				err = nil
+			}
+		}
+		// Also check for HTTP 409 status (Conflict) and error message patterns
+		if err != nil {
+			errStr := err.Error()
+			if serr, ok := err.(azblob.StorageError); ok {
+				if serr.Response().StatusCode == 409 {
+					log.Printf("Container '%s' already exists (HTTP 409), continuing...", containerName)
+					err = nil
+				}
+			} else if strings.Contains(errStr, "400 Bad Request") || 
+					  strings.Contains(errStr, "ContainerAlreadyExists") {
+				log.Printf("Container '%s' creation returned 400/already exists error, continuing...", containerName)
 				err = nil
 			}
 		}
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to create or access container '%s': %w", containerName, err)
 		}
+	} else {
+		log.Printf("Successfully created container '%s'", containerName)
 	}
 
 	return &BlobStorageService{

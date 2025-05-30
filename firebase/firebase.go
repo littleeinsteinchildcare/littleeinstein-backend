@@ -33,6 +33,7 @@ func Init() *firebase.App {
 	})
 	return app
 }
+
 // Auth returns the Firebase Auth client. It ensures Init() is run.
 func Auth(ctx context.Context) (*auth.Client, error) {
 	if app == nil {
@@ -40,7 +41,6 @@ func Auth(ctx context.Context) (*auth.Client, error) {
 	}
 	return app.Auth(ctx)
 }
-
 
 func Firestore(ctx context.Context) (*firestore.Client, error) {
 	if app == nil {

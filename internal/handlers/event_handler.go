@@ -4,11 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"littleeinsteinchildcare/backend/internal/models"
 	"littleeinsteinchildcare/backend/internal/utils"
 	"net/http"
 	"strings"
-	"littleeinsteinchildcare/backend/internal/api/middleware"
+	"littleeinsteinchildcare/backend/internal/common"
 )
 
 // EventService interface implemented in services package
@@ -16,6 +17,7 @@ type EventService interface {
 	CreateEvent(user models.Event) error
 	GetEventByID(id string) (models.Event, error)
 	GetAllEvents() ([]models.Event, error)
+	GetEventsByUser(userId string) ([]models.Event, error)
 	DeleteEventByID(id string) error
 	UpdateEvent(newData models.Event) (models.Event, error)
 }
@@ -55,7 +57,8 @@ func (h *EventHandler) GetEvent(w http.ResponseWriter, r *http.Request) {
 func (h *EventHandler) GetAllEvents(w http.ResponseWriter, r *http.Request) {
 	events, err := h.eventService.GetAllEvents()
 	if err != nil {
-		utils.WriteJSONError(w, http.StatusNotFound, fmt.Sprintf("EventHandler.GetAllEvents: Failed to retrieve list of users"), err)
+		utils.WriteJSONError(w, http.StatusInternalServerError, fmt.Sprintf("EventHandler.GetAllEvents: Failed to retrieve list of events"), err)
+		return
 	}
 	var responses []map[string]interface{}
 
@@ -69,6 +72,30 @@ func (h *EventHandler) GetAllEvents(w http.ResponseWriter, r *http.Request) {
 
 }
 
+// Return events where user is creator or invitee
+func (h *EventHandler) GetEventsByUser(w http.ResponseWriter, r *http.Request) {
+	userId := r.PathValue("userId")
+	
+	events, err := h.eventService.GetEventsByUser(userId)
+	if err != nil {
+		utils.WriteJSONError(w, http.StatusNotFound, fmt.Sprintf("EventHandler.GetEventsByUser: Failed to retrieve events for user %s", userId), err)
+		return
+	}
+	
+	var responses []map[string]interface{}
+	for _, event := range events {
+		resp := buildEventResponse(event)
+		log.Printf("DEBUG: Event in GetEventsByUser: ID=%s, Name=%s, Location=%s, Description=%s, Color=%s", 
+			event.ID, event.EventName, event.Location, event.Description, event.Color)
+		responses = append(responses, resp)
+	}
+	
+	log.Printf("DEBUG: GetEventsByUser returning %d events to frontend", len(responses))
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(responses)
+}
+
 // CreateEvent handles POST requests to create a new user
 func (h *EventHandler) CreateEvent(w http.ResponseWriter, r *http.Request) {
 	eventData, err := utils.DecodeJSONRequest(r)
@@ -78,17 +105,34 @@ func (h *EventHandler) CreateEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	creatorID, err := utils.GetUserIDFromAuth(r)
+	if err != nil {
+		utils.WriteJSONError(w, http.StatusUnauthorized, fmt.Sprintf("EventHandler.CreateEvent: Failed to get user ID from auth: %v", err), err)
+		return
+	}
+	log.Printf("DEBUG: Got creator ID from auth: %s", creatorID)
+	
 	// creator, err := h.userService.GetUserByID(eventData["creator"].(string))
+	log.Printf("DEBUG: About to call userService.GetUserByID with ID: '%s'", creatorID)
 	creator, err := h.userService.GetUserByID(creatorID)
 	if err != nil {
+		log.Printf("DEBUG: userService.GetUserByID failed with error: %v", err)
 		utils.WriteJSONError(w, http.StatusNotFound, fmt.Sprintf("EventHandler.CreateEvent: Failed to find Creator with ID %s:", creatorID), err)
 		return
 	}
-	invitee_ids := strings.Split(eventData["invitees"].(string), ",")
+	log.Printf("DEBUG: Successfully retrieved creator: %+v", creator)
+	inviteesStr := eventData["invitees"].(string)
+	log.Printf("DEBUG: Processing invitees string: '%s'", inviteesStr)
+	invitee_ids := strings.Split(inviteesStr, ",")
+	log.Printf("DEBUG: Split invitee IDs: %+v", invitee_ids)
 	var invitees_list []models.User
 
 	for _, id := range invitee_ids {
 		id = strings.TrimSpace(id)
+		log.Printf("DEBUG: Processing invitee ID: '%s'", id)
+		if id == "" {
+			log.Printf("DEBUG: Skipping empty invitee ID")
+			continue
+		}
 		user, err := h.userService.GetUserByID(id)
 		if err != nil {
 			utils.WriteJSONError(w, http.StatusNotFound, fmt.Sprintf("EventHandler.CreateEvent: Failed to find User with ID %s", id), err)
@@ -97,15 +141,37 @@ func (h *EventHandler) CreateEvent(w http.ResponseWriter, r *http.Request) {
 		invitees_list = append(invitees_list, user)
 	}
 
-	event := models.Event{
-		ID:        eventData["id"].(string),
-		EventName: eventData["eventname"].(string),
-		Date:      eventData["date"].(string),
-		StartTime: eventData["starttime"].(string),
-		EndTime:   eventData["endtime"].(string),
-		Creator:   creator,
-		Invitees:  invitees_list,
+	// Extract additional fields with safe type assertions
+	location := ""
+	if loc, ok := eventData["location"].(string); ok {
+		location = loc
 	}
+	
+	description := ""
+	if desc, ok := eventData["description"].(string); ok {
+		description = desc
+	}
+	
+	color := "#4CAF50" // Default green color
+	if col, ok := eventData["color"].(string); ok && col != "" {
+		color = col
+	}
+
+	event := models.Event{
+		ID:          eventData["id"].(string),
+		EventName:   eventData["eventname"].(string),
+		Date:        eventData["date"].(string),
+		StartTime:   eventData["starttime"].(string),
+		EndTime:     eventData["endtime"].(string),
+		Location:    location,
+		Description: description,
+		Color:       color,
+		Creator:     creator,
+		Invitees:    invitees_list,
+	}
+	
+	log.Printf("DEBUG: Created event object: ID=%s, Name=%s, Location=%s, Description=%s, Color=%s", 
+		event.ID, event.EventName, event.Location, event.Description, event.Color)
 
 	err = h.eventService.CreateEvent(event)
 	if err != nil {
@@ -114,6 +180,7 @@ func (h *EventHandler) CreateEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := buildEventResponse(event)
+	log.Printf("DEBUG: Event response being sent to frontend: %+v", response)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(response)
@@ -128,6 +195,7 @@ func (h *EventHandler) UpdateEvent(w http.ResponseWriter, r *http.Request) {
 		utils.WriteJSONError(w, http.StatusBadRequest, "EventHandler.UpdateEvent: Failed to Decode JSON", nil)
 		return
 	}
+	log.Printf("DEBUG UpdateEvent: Received event data: %+v", eventData)
 	if _, ok := eventData["id"]; !ok {
 		utils.WriteJSONError(w, http.StatusBadRequest, "EventHandler.UpdateEvent: Missing required field: id", nil)
 		return
@@ -185,6 +253,15 @@ func (h *EventHandler) BuildPartialEvent(w http.ResponseWriter, eventData map[st
 	if v, ok := eventData["endtime"].(string); ok {
 		event.EndTime = v
 	}
+	if v, ok := eventData["location"].(string); ok {
+		event.Location = v
+	}
+	if v, ok := eventData["description"].(string); ok {
+		event.Description = v
+	}
+	if v, ok := eventData["color"].(string); ok {
+		event.Color = v
+	}
 
 	//! Questionable - Given time for a refactor, this could be cleaner with a better overall structure
 	// Grab IDs from Event Data and populate Event object with relevant User objects
@@ -200,15 +277,26 @@ func (h *EventHandler) BuildPartialEvent(w http.ResponseWriter, eventData map[st
 
 	var invitees_list []models.User
 	if eventData["invitees"] != nil {
-		invitee_ids := strings.Split(eventData["invitees"].(string), ",")
+		inviteesStr := eventData["invitees"].(string)
+		log.Printf("DEBUG BuildPartialEvent: Processing invitees string: '%s'", inviteesStr)
+		if inviteesStr != "" {
+			invitee_ids := strings.Split(inviteesStr, ",")
+			log.Printf("DEBUG BuildPartialEvent: Split invitee IDs: %+v", invitee_ids)
 
-		for _, id := range invitee_ids {
-			id = strings.TrimSpace(id)
-			user, err := h.userService.GetUserByID(id)
-			if err != nil {
-				return event, err
+			for _, id := range invitee_ids {
+				id = strings.TrimSpace(id)
+				log.Printf("DEBUG BuildPartialEvent: Processing invitee ID: '%s'", id)
+				if id == "" {
+					log.Printf("DEBUG BuildPartialEvent: Skipping empty invitee ID")
+					continue
+				}
+				user, err := h.userService.GetUserByID(id)
+				if err != nil {
+					log.Printf("DEBUG BuildPartialEvent: Failed to get user with ID '%s': %v", id, err)
+					return event, err
+				}
+				invitees_list = append(invitees_list, user)
 			}
-			invitees_list = append(invitees_list, user)
 		}
 		event.Invitees = invitees_list
 	}
@@ -218,25 +306,28 @@ func (h *EventHandler) BuildPartialEvent(w http.ResponseWriter, eventData map[st
 // Helper functiont to package JSON response
 func buildEventResponse(event models.Event) map[string]interface{} {
 	response := map[string]interface{}{
-		"id":        event.ID,
-		"eventname": event.EventName,
-		"date":      event.Date,
-		"starttime": event.StartTime,
-		"endtime":   event.EndTime,
-		"creator":   event.Creator,
-		"invitees":  event.Invitees,
+		"id":          event.ID,
+		"eventname":   event.EventName,
+		"date":        event.Date,
+		"starttime":   event.StartTime,
+		"endtime":     event.EndTime,
+		"location":    event.Location,
+		"description": event.Description,
+		"color":       event.Color,
+		"creator":     event.Creator,
+		"invitees":    event.Invitees,
 	}
 	return response
 }
 
 func (h *EventHandler) TestConnection(w http.ResponseWriter, r *http.Request) {
-	uid, ok := r.Context().Value(middleware.ContextUID).(string)
+	uid, ok := r.Context().Value(common.ContextUID).(string)
 	if !ok {
 		http.Error(w, "UID missing in context", http.StatusInternalServerError)
 		return
 	}
 
-	email, _ := r.Context().Value(middleware.ContextEmail).(string)
+	email, _ := r.Context().Value(common.ContextEmail).(string)
 
 	response := map[string]interface{}{
 		"status": "authenticated",

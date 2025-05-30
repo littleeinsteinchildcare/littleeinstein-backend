@@ -9,6 +9,8 @@ import (
 	"littleeinsteinchildcare/backend/internal/services"
 	"strings"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/data/aztables"
 )
 
@@ -71,28 +73,54 @@ func (repo *EventRepository) GetEvent(tableName string, id string) (models.Event
 	}
 
 	// Process Invitee IDs to store list of Users in Event struct
-	invitee_ids := strings.Split(myEntity.Properties["Invitees"].(string), ",")
-
 	var invitees_list []models.User
+	inviteesStr := myEntity.Properties["Invitees"].(string)
+	
+	if inviteesStr != "" {
+		invitee_ids := strings.Split(inviteesStr, ",")
 
-	for _, id := range invitee_ids {
-		user, err := userRepo.GetUser("UsersTable", id)
-		if err != nil {
-			return models.Event{}, fmt.Errorf("EventRepo.GetEvent: Failed to get invitee %w", err)
+		for _, id := range invitee_ids {
+			id = strings.TrimSpace(id)
+			if id == "" {
+				continue
+			}
+			user, err := userRepo.GetUser("UsersTable", id)
+			if err != nil {
+				return models.Event{}, fmt.Errorf("EventRepo.GetEvent: Failed to get invitee %w", err)
+			}
+			invitees_list = append(invitees_list, user)
 		}
-		invitees_list = append(invitees_list, user)
 	}
 
 	//! END Hacky }
 
+	// Safely extract additional fields with default values
+	location := ""
+	if loc, ok := myEntity.Properties["Location"].(string); ok {
+		location = loc
+	}
+	
+	description := ""
+	if desc, ok := myEntity.Properties["Description"].(string); ok {
+		description = desc
+	}
+	
+	color := "#4CAF50" // Default green color
+	if col, ok := myEntity.Properties["Color"].(string); ok && col != "" {
+		color = col
+	}
+
 	event := models.Event{
-		ID:        myEntity.RowKey,
-		EventName: myEntity.Properties["EventName"].(string),
-		Date:      myEntity.Properties["Date"].(string),
-		StartTime: myEntity.Properties["StartTime"].(string),
-		EndTime:   myEntity.Properties["EndTime"].(string),
-		Creator:   creator,
-		Invitees:  invitees_list,
+		ID:          myEntity.RowKey,
+		EventName:   myEntity.Properties["EventName"].(string),
+		Date:        myEntity.Properties["Date"].(string),
+		StartTime:   myEntity.Properties["StartTime"].(string),
+		EndTime:     myEntity.Properties["EndTime"].(string),
+		Location:    location,
+		Description: description,
+		Color:       color,
+		Creator:     creator,
+		Invitees:    invitees_list,
 	}
 
 	return event, nil
@@ -114,6 +142,12 @@ func (repo *EventRepository) GetAllEvents(tableName string) ([]models.EventEntit
 	for pager.More() {
 		response, err := pager.NextPage(context.Background())
 		if err != nil {
+			// If table doesn't exist, return empty array instead of error
+			// Azure returns "TableNotFound" error code when table doesn't exist
+			errMsg := err.Error()
+			if strings.Contains(errMsg, "TableNotFound") {
+				return []models.EventEntity{}, nil
+			}
 			return nil, fmt.Errorf("EventRepo.GetAllEvents: Failed to acquire next page: %w", err)
 		}
 		pageCount += 1
@@ -148,12 +182,15 @@ func (repo *EventRepository) CreateEvent(tableName string, event models.Event) e
 			RowKey:       event.ID,
 		},
 		Properties: map[string]any{
-			"EventName": event.EventName,
-			"Date":      event.Date,
-			"StartTime": event.StartTime,
-			"EndTime":   event.EndTime,
-			"Creator":   event.Creator.ID,
-			"Invitees":  ids_string,
+			"EventName":   event.EventName,
+			"Date":        event.Date,
+			"StartTime":   event.StartTime,
+			"EndTime":     event.EndTime,
+			"Location":    event.Location,
+			"Description": event.Description,
+			"Color":       event.Color,
+			"Creator":     event.Creator.ID,
+			"Invitees":    ids_string,
 		},
 	}
 
@@ -204,12 +241,15 @@ func (repo *EventRepository) UpdateEvent(tableName string, newEventData models.E
 			RowKey:       event.ID,
 		},
 		Properties: map[string]any{
-			"EventName": event.EventName,
-			"Date":      event.Date,
-			"StartTime": event.StartTime,
-			"EndTime":   event.EndTime,
-			"Creator":   event.Creator.ID,
-			"Invitees":  ids_string,
+			"EventName":   event.EventName,
+			"Date":        event.Date,
+			"StartTime":   event.StartTime,
+			"EndTime":     event.EndTime,
+			"Location":    event.Location,
+			"Description": event.Description,
+			"Color":       event.Color,
+			"Creator":     event.Creator.ID,
+			"Invitees":    ids_string,
 		},
 	}
 
@@ -231,7 +271,11 @@ func (repo *EventRepository) DeleteEvent(tableName string, id string) error {
 	ctx := context.Background()
 	tableClient := repo.serviceClient.NewClient(tableName)
 
-	_, err := tableClient.DeleteEntity(ctx, PKey, id, nil)
+	options := &aztables.DeleteEntityOptions{
+		IfMatch: to.Ptr(azcore.ETagAny),
+	}
+
+	_, err := tableClient.DeleteEntity(ctx, PKey, id, options)
 	if err != nil {
 		return fmt.Errorf("EventRepo.DeleteEvent: Failed to delete entity in %s: %w", tableName, err)
 	}

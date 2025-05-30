@@ -6,14 +6,14 @@ import (
 	"littleeinsteinchildcare/backend/internal/handlers"
 )
 
-// RegisterUserRoutes sets up all user-related routes
+// RegisterEventRoutes sets up all event-related routes
 func RegisterEventRoutes(router *http.ServeMux, eventHandler *handlers.EventHandler) {
-	// User routes using Go 1.22+ path pattern syntax
-	router.HandleFunc("GET /api/event/{id}", eventHandler.GetEvent)
-	router.HandleFunc("GET /api/events", eventHandler.GetAllEvents)
-	router.HandleFunc("DELETE /api/event/{id}", eventHandler.DeleteEvent)
-	router.HandleFunc("POST /api/event", eventHandler.CreateEvent)
-	router.HandleFunc("PUT /api/event/{id}", eventHandler.UpdateEvent)
-	router.HandleFunc("GET /test", eventHandler.TestConnection)
-
+	// Event routes - authentication handled at router level
+	router.Handle("GET /api/event/{id}", http.HandlerFunc(eventHandler.GetEvent))
+	router.Handle("GET /api/events", http.HandlerFunc(eventHandler.GetAllEvents))
+	router.Handle("GET /api/events/user/{userId}", http.HandlerFunc(eventHandler.GetEventsByUser))
+	router.Handle("DELETE /api/event/{id}", http.HandlerFunc(eventHandler.DeleteEvent))
+	router.Handle("POST /api/event", http.HandlerFunc(eventHandler.CreateEvent))
+	router.Handle("PUT /api/event/{id}", http.HandlerFunc(eventHandler.UpdateEvent))
+	router.Handle("GET /test", http.HandlerFunc(eventHandler.TestConnection))
 }
