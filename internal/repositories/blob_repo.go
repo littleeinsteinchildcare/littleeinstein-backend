@@ -47,7 +47,8 @@ func NewBlobStorageService(accountName, accountKey, containerName string) (*Blob
 		if blobServiceURL == "" {
 			blobServiceURL = "http://127.0.0.1:10000"
 		}
-		containerURLStr = fmt.Sprintf("%s/%s/%s", blobServiceURL, accountName, containerName)
+		containerURLStr = fmt.Sprintf("http://host.docker.internal:10000/%s/%s", accountName, containerName)
+		// containerURLStr = fmt.Sprintf("%s/%s/%s", blobServiceURL, accountName, containerName)
 	}
 
 	URL, _ := url.Parse(containerURLStr)

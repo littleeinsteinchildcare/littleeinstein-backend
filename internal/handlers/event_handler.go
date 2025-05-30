@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
+	"littleeinsteinchildcare/backend/internal/common"
 	"littleeinsteinchildcare/backend/internal/models"
 	"littleeinsteinchildcare/backend/internal/utils"
+	"log"
 	"net/http"
 	"strings"
-	"littleeinsteinchildcare/backend/internal/common"
 )
 
 // EventService interface implemented in services package
@@ -75,21 +75,21 @@ func (h *EventHandler) GetAllEvents(w http.ResponseWriter, r *http.Request) {
 // Return events where user is creator or invitee
 func (h *EventHandler) GetEventsByUser(w http.ResponseWriter, r *http.Request) {
 	userId := r.PathValue("userId")
-	
+
 	events, err := h.eventService.GetEventsByUser(userId)
 	if err != nil {
 		utils.WriteJSONError(w, http.StatusNotFound, fmt.Sprintf("EventHandler.GetEventsByUser: Failed to retrieve events for user %s", userId), err)
 		return
 	}
-	
+
 	var responses []map[string]interface{}
 	for _, event := range events {
 		resp := buildEventResponse(event)
-		log.Printf("DEBUG: Event in GetEventsByUser: ID=%s, Name=%s, Location=%s, Description=%s, Color=%s", 
+		log.Printf("DEBUG: Event in GetEventsByUser: ID=%s, Name=%s, Location=%s, Description=%s, Color=%s",
 			event.ID, event.EventName, event.Location, event.Description, event.Color)
 		responses = append(responses, resp)
 	}
-	
+
 	log.Printf("DEBUG: GetEventsByUser returning %d events to frontend", len(responses))
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
@@ -110,7 +110,7 @@ func (h *EventHandler) CreateEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Printf("DEBUG: Got creator ID from auth: %s", creatorID)
-	
+
 	// creator, err := h.userService.GetUserByID(eventData["creator"].(string))
 	log.Printf("DEBUG: About to call userService.GetUserByID with ID: '%s'", creatorID)
 	creator, err := h.userService.GetUserByID(creatorID)
@@ -146,12 +146,12 @@ func (h *EventHandler) CreateEvent(w http.ResponseWriter, r *http.Request) {
 	if loc, ok := eventData["location"].(string); ok {
 		location = loc
 	}
-	
+
 	description := ""
 	if desc, ok := eventData["description"].(string); ok {
 		description = desc
 	}
-	
+
 	color := "#4CAF50" // Default green color
 	if col, ok := eventData["color"].(string); ok && col != "" {
 		color = col
@@ -169,8 +169,8 @@ func (h *EventHandler) CreateEvent(w http.ResponseWriter, r *http.Request) {
 		Creator:     creator,
 		Invitees:    invitees_list,
 	}
-	
-	log.Printf("DEBUG: Created event object: ID=%s, Name=%s, Location=%s, Description=%s, Color=%s", 
+
+	log.Printf("DEBUG: Created event object: ID=%s, Name=%s, Location=%s, Description=%s, Color=%s",
 		event.ID, event.EventName, event.Location, event.Description, event.Color)
 
 	err = h.eventService.CreateEvent(event)
