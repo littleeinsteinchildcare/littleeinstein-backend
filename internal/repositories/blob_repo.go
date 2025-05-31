@@ -44,9 +44,12 @@ func NewBlobStorageService(accountName, accountKey, containerName string) (*Blob
 		//fmt.Printf("DEVELOPMENT\n")
 		// Use environment variable if set, otherwise default to localhost
 		blobServiceURL := os.Getenv("LOCAL_AZURE_BLOB_SERVICE_URL")
-		if blobServiceURL == "" {
-			blobServiceURL = "http://127.0.0.1:10000"
-		}
+		//if blobServiceURL == "" {
+		//	blobServiceURL = "http://host.docker.internal:10000"
+		//}
+		//containerURLStr = fmt.Sprintf("%s/%s/%s", blobServiceURL, accountName, containerName)
+		blobServiceURL = "http://host.docker.internal:10000"
+		accountName := os.Getenv("LOCAL_AZURE_STORAGE_ACCOUNT_NAME")
 		containerURLStr = fmt.Sprintf("%s/%s/%s", blobServiceURL, accountName, containerName)
 	}
 
@@ -106,13 +109,21 @@ func (s *BlobStorageService) UploadImage(ctx context.Context, fileName string, c
 
 	user, err := userRepo.GetUser(services.USERSTABLE, userID)
 	if err != nil {
-		return &models.Image{}, fmt.Errorf("BlobRepo.UploadImage: Failed to Get User from UserRepo")
+		// user doesn't exist — create
+		user = models.User{
+			ID:     userID,
+			Name:   "", 
+			Email:  "",
+			Role:   "parent",
+			Images: []string{},
+		}
 	}
 	user.Images = append(user.Images, fileName)
 
-	_, err = userRepo.UpdateUser(services.USERSTABLE, user)
+	// Save or update the user
+	err = userRepo.UpsertUser(services.USERSTABLE, user)
 	if err != nil {
-		return &models.Image{}, fmt.Errorf("BlobRepo.UploadImage: Failed to add filename")
+		return &models.Image{}, fmt.Errorf("BlobRepo.UploadImage: Failed to save or insert user with new image: %w", err)
 	}
 
 	// Create a unique blob name
@@ -133,9 +144,9 @@ func (s *BlobStorageService) UploadImage(ctx context.Context, fileName string, c
 		},
 	}
 
-	_, err2 := azblob.UploadBufferToBlockBlob(ctx, data, blobURL, uploadOptions)
-	if err2 != nil {
-		return nil, err
+	_, err = azblob.UploadBufferToBlockBlob(ctx, data, blobURL, uploadOptions)
+	if err != nil {
+		return nil, fmt.Errorf("BlobRepo.UploadImage: Failed to upload blob %w", err)
 	}
 
 	// Get the URL for the uploaded blob
