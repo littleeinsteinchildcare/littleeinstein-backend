@@ -7,10 +7,12 @@ import (
 	"littleeinsteinchildcare/backend/internal/config"
 	"littleeinsteinchildcare/backend/internal/models"
 	"littleeinsteinchildcare/backend/internal/services"
+	"os"
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/data/aztables"
 )
 
@@ -25,15 +27,30 @@ type EventRepository struct {
 
 // NewEventRepo creates and returns a new, unconnected EventRepo object
 func NewEventRepo(cfg config.AzTableConfig) (services.EventRepo, error) {
-	cred, err := aztables.NewSharedKeyCredential(cfg.AzureAccountName, cfg.AzureAccountKey)
-	if err != nil {
-		return nil, fmt.Errorf("EventRepo.NewEventRepo: Failed to create credentials: %w", err)
+
+	if os.Getenv("APP_ENV") == "production" {
+		cred, err := azidentity.NewDefaultAzureCredential(nil)
+		if err != nil {
+			return nil, fmt.Errorf("EventRepo.NewEventRepo: failed to created Default Azure Credentials for Managed Identity: %w", err)
+		}
+		client, err := aztables.NewServiceClient(cfg.AzureContainerName, cred, nil)
+		if err != nil {
+			return nil, fmt.Errorf("EventRepo.NewEventRepo: Failed to initialize Default Credential service client: %w", err)
+		}
+		return &EventRepository{serviceClient: *client}, nil
+
+	} else {
+
+		cred, err := aztables.NewSharedKeyCredential(cfg.AzureAccountName, cfg.AzureAccountKey)
+		if err != nil {
+			return nil, fmt.Errorf("EventRepo.NewEventRepo: Failed to create credentials: %w", err)
+		}
+		client, err := aztables.NewServiceClientWithSharedKey(cfg.AzureContainerName, cred, nil)
+		if err != nil {
+			return nil, fmt.Errorf("EventRepo.NewEventRepo: Failed to initialize service client: %w", err)
+		}
+		return &EventRepository{serviceClient: *client}, nil
 	}
-	client, err := aztables.NewServiceClientWithSharedKey(cfg.AzureContainerName, cred, nil)
-	if err != nil {
-		return nil, fmt.Errorf("EventRepo.NewEventRepo: Failed to initialize service client: %w", err)
-	}
-	return &EventRepository{serviceClient: *client}, nil
 }
 
 // GetEvent retrieves and stores entity data in a Repo object
@@ -75,7 +92,7 @@ func (repo *EventRepository) GetEvent(tableName string, id string) (models.Event
 	// Process Invitee IDs to store list of Users in Event struct
 	var invitees_list []models.User
 	inviteesStr := myEntity.Properties["Invitees"].(string)
-	
+
 	if inviteesStr != "" {
 		invitee_ids := strings.Split(inviteesStr, ",")
 
@@ -99,12 +116,12 @@ func (repo *EventRepository) GetEvent(tableName string, id string) (models.Event
 	if loc, ok := myEntity.Properties["Location"].(string); ok {
 		location = loc
 	}
-	
+
 	description := ""
 	if desc, ok := myEntity.Properties["Description"].(string); ok {
 		description = desc
 	}
-	
+
 	color := "#4CAF50" // Default green color
 	if col, ok := myEntity.Properties["Color"].(string); ok && col != "" {
 		color = col

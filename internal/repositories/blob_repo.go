@@ -15,8 +15,24 @@ import (
 	"littleeinsteinchildcare/backend/internal/models"
 	"littleeinsteinchildcare/backend/internal/services"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-storage-blob-go/azblob"
 )
+
+type MITokenProvider struct {
+	tokenCred azcore.TokenCredential
+}
+
+func (m *MITokenProvider) Token() (string, error) {
+	token, err := m.tokenCred.GetToken(context.Background(), policy.TokenRequestOptions{
+		Scopes: []string{"https://storage.azure.com/.default"},
+	})
+	if err != nil {
+		return "", fmt.Errorf("MITokenProvider.Token: Failed to get token: %w", err)
+	}
+	return token.Token, nil
+}
 
 type BlobStorageService struct {
 	containerURL azblob.ContainerURL
@@ -78,8 +94,8 @@ func NewBlobStorageService(accountName, accountKey, containerName string) (*Blob
 					log.Printf("Container '%s' already exists (HTTP 409), continuing...", containerName)
 					err = nil
 				}
-			} else if strings.Contains(errStr, "400 Bad Request") || 
-					  strings.Contains(errStr, "ContainerAlreadyExists") {
+			} else if strings.Contains(errStr, "400 Bad Request") ||
+				strings.Contains(errStr, "ContainerAlreadyExists") {
 				log.Printf("Container '%s' creation returned 400/already exists error, continuing...", containerName)
 				err = nil
 			}
@@ -112,7 +128,7 @@ func (s *BlobStorageService) UploadImage(ctx context.Context, fileName string, c
 		// user doesn't exist — create
 		user = models.User{
 			ID:     userID,
-			Name:   "", 
+			Name:   "",
 			Email:  "",
 			Role:   "parent",
 			Images: []string{},
