@@ -4,14 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"littleeinsteinchildcare/backend/internal/config"
 	"littleeinsteinchildcare/backend/internal/models"
 	"littleeinsteinchildcare/backend/internal/services"
+	"log"
+	"os"
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/data/aztables"
 )
 
@@ -24,15 +26,33 @@ type UserRepository struct {
 
 // NewUserRepo creates and returns a new, unconnected UserRepo object
 func NewUserRepo(cfg config.AzTableConfig) (services.UserRepo, error) {
-	cred, err := aztables.NewSharedKeyCredential(cfg.AzureAccountName, cfg.AzureAccountKey)
-	if err != nil {
-		return nil, fmt.Errorf("UserRepository.NewUserRepo: Failed to create credentials: %w", err)
+
+	// Production case
+	if os.Getenv("APP_ENV") == "production" {
+		cred, err := azidentity.NewDefaultAzureCredential(nil)
+		if err != nil {
+			return nil, fmt.Errorf("UserRepo.NewUserRepo: failed to create Default Azure Credential for Managed Identity: %w", err)
+		}
+		client, err := aztables.NewServiceClient(cfg.AzureContainerName, cred, nil)
+		if err != nil {
+			return nil, fmt.Errorf("UserRepository.NewUserRepo: Failed to initialize Default Credential service client: %w", err)
+		}
+		return &UserRepository{serviceClient: *client}, nil
+
+		// Development Case
+	} else {
+
+		cred, err := aztables.NewSharedKeyCredential(cfg.AzureAccountName, cfg.AzureAccountKey)
+		if err != nil {
+			return nil, fmt.Errorf("UserRepository.NewUserRepo: Failed to create credentials: %w", err)
+		}
+		client, err := aztables.NewServiceClientWithSharedKey(cfg.AzureContainerName, cred, nil)
+		if err != nil {
+			return nil, fmt.Errorf("UserRepository.NewUserRepo: Failed to initialize service client: %w", err)
+		}
+		return &UserRepository{serviceClient: *client}, nil
 	}
-	client, err := aztables.NewServiceClientWithSharedKey(cfg.AzureContainerName, cred, nil)
-	if err != nil {
-		return nil, fmt.Errorf("UserRepository.NewUserRepo: Failed to initialize service client: %w", err)
-	}
-	return &UserRepository{serviceClient: *client}, nil
+
 }
 
 // GetUser retrieves and stores entity data in a User object
@@ -196,7 +216,6 @@ func (repo *UserRepository) UpsertUser(tableName string, user models.User) error
 	}
 	return nil
 }
-
 
 func (repo *UserRepository) UpdateUser(tableName string, newUserData models.User) (models.User, error) {
 	ctx := context.Background()
