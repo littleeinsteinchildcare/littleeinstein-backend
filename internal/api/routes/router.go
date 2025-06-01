@@ -1,7 +1,9 @@
 package routes
 
 import (
+	"context"
 	"encoding/json"
+	"littleeinsteinchildcare/backend/firebase"
 	"littleeinsteinchildcare/backend/internal/config"
 	"littleeinsteinchildcare/backend/internal/handlers"
 	"littleeinsteinchildcare/backend/internal/repositories"
@@ -15,7 +17,7 @@ import (
 // SetupRouter configures and returns the main HTTP router for the application.
 // It initializes all necessary Azure Table Storage dependencies, registers API routes,
 // and configures error handling for the Little Einstein Childcare API.
-func SetupRouter() *http.ServeMux {
+func SetupPrivateRouter() *http.ServeMux {
 	// Create a new HTTP router instance
 	router := http.NewServeMux()
 
@@ -42,6 +44,8 @@ func SetupRouter() *http.ServeMux {
 	if err != nil {
 		log.Fatalf("Router.SetupRouter: Failed to create event repository: %v", err)
 	}
+	
+	
 
 	blobConfig, err := config.LoadBlobConfig()
 	if err != nil {
@@ -92,9 +96,14 @@ func SetupRouter() *http.ServeMux {
 		apiKey,
 	)
 
-	emailHandler := handlers.NewEmailHandler(emailService)
+	ctx := context.Background()
+	fsClient, err := firebase.Firestore(ctx)
+	if err != nil {
+		panic("Failed to connect to Firestore for private routes: " + err.Error())
+	}
+	emailHandler := handlers.NewEmailHandler(emailService, fsClient)
 
-	RegisterEmailRoutes(router, emailHandler)
+	RegisterProtectedEmailRoutes(router, emailHandler)
 
 	// ---------- BANNER MODULE SETUP ----------
 	// Create banner service (no repository needed)
@@ -189,4 +198,19 @@ func registerAzureB2CEndpoint(router *http.ServeMux) {
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(response)
 	})
+}
+
+func SetupPublicRouter() *http.ServeMux {
+	// Create a new HTTP router instance for public routes
+	router := http.NewServeMux()
+
+	ctx := context.Background()
+	fsClient, err := firebase.Firestore(ctx)
+	if err != nil {
+		panic("Failed to connect to Firestore for public routes: " + err.Error())
+	}
+	emailHandler := handlers.NewEmailHandler(nil, fsClient);
+	RegisterUnprotectedEmailRoutes(router, emailHandler);
+
+	return router
 }

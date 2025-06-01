@@ -163,6 +163,17 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 			role = "admin"
 			isAdmin = true
 		}
+
+		if signedUp, ok := docSnap.Data()["signedUp"].(bool); ok && signedUp {
+			// Already signed up, skip user creation
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(map[string]string{
+				"message": "User already created",
+			})
+			return
+		}
+
 	}
 
 	if isAdmin {

@@ -46,13 +46,20 @@ func main() {
 	cfg, _ := config.LoadServerConfig()
 
 	// Set up router with all routes
-	router := routes.SetupRouter()
+	privateRouter := routes.SetupPrivateRouter()
+	publicRouter := routes.SetupPublicRouter()
 
-	protectedRouter := middleware.FirebaseAuthMiddleware(router)
+	protected := middleware.FirebaseAuthMiddleware(privateRouter)
 	//TODO: Wrap router in Auth middleware
+	
+	mainRouter := http.NewServeMux()
+	mainRouter.Handle("/", publicRouter) // Public routes
+	mainRouter.Handle("/api/",protected) // Protected routes
+
+
 
 	// Wrap with CORS
-	corsHandler := middleware.CorsMiddleware(protectedRouter)
+	corsHandler := middleware.CorsMiddleware(mainRouter)
 
 	// Server configuration with security timeouts
 	server := http.Server{
