@@ -26,7 +26,7 @@ func (s *SendGridService) SendInviteEmail(to string) error {
 	recipient := mail.NewEmail("", to)
 	subject := "You're Invited!"
 	plainTextContent := "Your account is ready. Please click Sign in button and sign up with this email:"
-	htmlContent := `<p>Your account is ready. <a href="https://littleeinsteinchildcare.org">Click to sign up</a></p>`
+	htmlContent := `<p>Your account is ready. <a href="https://littleeinsteinchildcare.org/signup">Click to sign up</a></p>`
 
 	message := mail.NewSingleEmail(from, subject, recipient, plainTextContent, htmlContent)
 	client := sendgrid.NewSendClient(s.APIKey)
